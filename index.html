@@ -60,7 +60,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .hour-line{position:absolute;left:0;right:0;border-top:1px solid var(--border)}
 .half-line{position:absolute;left:0;right:0;border-top:1px dashed var(--border);opacity:0.4}
 .events-col.drag-over{background:var(--accent-light)}
-.now-line{position:absolute;left:0;right:0;height:2px;background:var(--accent);z-index:10;pointer-events:none}
+.now-line{position:absolute;left:0;right:0;height:2px;background:var(--accent);z-index:10;pointer-events:all}
 .now-dot{position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
 .cal-event{position:absolute;left:4px;right:4px;border-radius:8px;padding:5px 26px 12px 8px;font-size:12px;cursor:grab;user-select:none;overflow:hidden;z-index:5;transition:box-shadow 0.1s}
 .cal-event:hover{box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:6}
@@ -96,6 +96,16 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.draggable {touch-action: none; user-select: none;}
+.cal-event, .ev-resize {
+  touch-action: none;
+}
+.pool-task {
+  touch-action: none;
+}
+#events-col, .pool-task {
+  touch-action: none;
+}
 </style>
 </head>
 <body>
@@ -166,11 +176,11 @@ const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const HOUR = 64;
 const SNAP = 16;
 
-const ROUTINE_TEMPLATES = [
-  {name:'Exercise',          start:'07:30',end:'08:30',type:'routine-ev'},
+let routineTemplates = [
+  {name:'Exercise', start:'07:30',end:'08:30',type:'routine-ev'},
   {name:'Deep work — study', start:'09:00',end:'11:00',type:'routine-ev'},
-  {name:'Importadora JV',    start:'12:00',end:'13:00',type:'routine-ev'},
-  {name:'Deep work #2',      start:'14:00',end:'16:00',type:'routine-ev'},
+  {name:'Importadora JV', start:'12:00',end:'13:00',type:'routine-ev'},
+  {name:'Deep work #2', start:'14:00',end:'16:00',type:'routine-ev'},
 ];
 
 const today = new Date(); today.setHours(0,0,0,0);
@@ -183,6 +193,9 @@ let folderId = null;
 let saveTimer = null;
 let dragState = null;
 let modalCb = null;
+let offsetX = 0;
+let offsetY = 0;
+let dragging = null;
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function dateStr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -192,7 +205,18 @@ function fmtTime(t){ const [h,m]=t.split(':').map(Number); return `${h%12||12}:$
 
 function getEvents(d){
   const k=dateStr(d);
-  if(!events[k]) events[k]=ROUTINE_TEMPLATES.map(t=>({id:uid(),name:t.name,start:t.start,end:t.end,type:t.type,done:false}));
+  if(!events[k]){
+    events[k] = JSON.parse(JSON.stringify(routineTemplates)).map(t=>({
+      id: uid(),
+      name: t.name,
+      start: t.start,
+      end: t.end,
+      type: t.type,
+      done: false
+    }));
+    renderAll();
+    scrollToNow();
+  }
   return events[k];
 }
 
@@ -237,9 +261,30 @@ function renderEvents(){
     el.style.top=top+'px'; el.style.height=h+'px'; el.dataset.id=ev.id;
     el.innerHTML=`<div class="ev-title">${ev.name}</div><div class="ev-time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div><div class="ev-actions"><div class="ev-check${ev.done?' checked':''}" data-id="${ev.id}">${ev.done?'✓':''}</div><div class="ev-del" data-id="${ev.id}">✕</div></div><div class="ev-resize" data-id="${ev.id}"></div>`;
     el.querySelector('.ev-check').addEventListener('click',e=>{ e.stopPropagation(); const x=getEvents(selectedDate).find(x=>x.id===ev.id); if(x){x.done=!x.done; renderEvents(); scheduleSave();} });
-    el.querySelector('.ev-del').addEventListener('click',e=>{ e.stopPropagation(); const k=dateStr(selectedDate); events[k]=(events[k]||[]).filter(x=>x.id!==ev.id); renderEvents(); scheduleSave(); });
-    el.querySelector('.ev-resize').addEventListener('mousedown',onResizeDown);
-    el.addEventListener('mousedown',onMoveDown);
+    el.querySelector('.ev-del').addEventListener('click',e=>{
+      e.stopPropagation();
+
+      const k = dateStr(selectedDate);
+
+      // ✅ If it's a task, return it to pool
+      if(ev.type === 'task-ev'){
+        poolTasks.push({
+          id: uid(),
+          name: ev.name
+        });
+        renderPool();
+        renderAll();
+        scrollToNow();
+      }
+
+      // remove from calendar
+      events[k] = (events[k] || []).filter(x => x.id !== ev.id);
+
+      renderEvents();
+      scheduleSave();
+    });
+    el.querySelector('.ev-resize').addEventListener('pointerdown', onResizeDown);
+    el.addEventListener("pointerdown", onMoveDown);
     col.appendChild(el);
   });
 }
@@ -250,14 +295,37 @@ function onMoveDown(e){
   e.preventDefault();
   const el=e.currentTarget, ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); if(!ev) return;
   dragState={type:'move',id:ev.id,startY:e.clientY,origTop:timeToY(ev.start),dur:timeToY(ev.end)-timeToY(ev.start)};
-  document.addEventListener('mousemove',onDragMove); document.addEventListener('mouseup',onDragUp);
+  document.addEventListener("pointermove", onDragMove); document.addEventListener("pointerup", onDragUp);
+
+  dragging = e.currentTarget;
+
+  const rect = dragging.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
+
+  dragging.setPointerCapture(e.pointerId);
 }
 
 function onResizeDown(e){
-  e.preventDefault(); e.stopPropagation();
-  const id=e.currentTarget.dataset.id, ev=getEvents(selectedDate).find(x=>x.id===id); if(!ev) return;
-  dragState={type:'resize',id,startY:e.clientY,origEnd:timeToY(ev.end)};
-  document.addEventListener('mousemove',onDragMove); document.addEventListener('mouseup',onDragUp);
+  e.preventDefault();
+  e.stopPropagation();
+
+  const handle = e.currentTarget;
+  handle.setPointerCapture(e.pointerId); // ✅ ADD THIS
+
+  const id = handle.dataset.id;
+  const ev = getEvents(selectedDate).find(x=>x.id===id);
+  if(!ev) return;
+
+  dragState = {
+    type:'resize',
+    id,
+    startY:e.clientY,
+    origEnd:timeToY(ev.end)
+  };
+
+  document.addEventListener("pointermove", onDragMove);
+  document.addEventListener("pointerup", onDragUp);
 }
 
 function onDragMove(e){
@@ -274,7 +342,19 @@ function onDragMove(e){
   renderEvents();
 }
 
-function onDragUp(){ if(dragState){dragState=null;scheduleSave();} document.removeEventListener('mousemove',onDragMove); document.removeEventListener('mouseup',onDragUp); }
+function onDragUp(e){ 
+  if(e && e.target.releasePointerCapture){
+    try{ e.target.releasePointerCapture(e.pointerId); }catch{}
+  }
+
+  if(dragState){
+    dragState = null;
+    scheduleSave();
+  }
+
+  document.removeEventListener("pointerup", onDragUp); 
+  document.removeEventListener("pointermove", onDragMove);
+}
 
 // POOL
 function renderPool(){
@@ -282,13 +362,111 @@ function renderPool(){
   if(!poolTasks.length){ const e=document.createElement('div'); e.style.cssText='font-size:11px;color:var(--text3);padding:10px 4px;'; e.textContent='Pool is empty — add tasks above'; list.appendChild(e); return; }
   const sec=document.createElement('div'); sec.className='pool-section'; sec.textContent='Backlog'; list.appendChild(sec);
   poolTasks.forEach(t=>{
-    const el=document.createElement('div'); el.className='pool-task'; el.draggable=true;
+    const el=document.createElement('div'); el.className='pool-task';
     el.innerHTML=`<span class="pool-task-name">${t.name}</span><span class="pool-task-del" data-id="${t.id}">✕</span>`;
-    el.addEventListener('dragstart',e=>e.dataTransfer.setData('poolId',t.id));
     el.querySelector('.pool-task-del').addEventListener('click',e=>{ e.stopPropagation(); poolTasks=poolTasks.filter(x=>x.id!==t.id); renderPool(); scheduleSave(); });
     list.appendChild(el);
+    el.addEventListener("pointerdown", onPoolDown);
   });
 }
+
+function onPoolDown(e){
+  e.preventDefault();
+
+  const el = e.currentTarget;
+  const taskName = el.querySelector('.pool-task-name').textContent;
+
+  dragging = el.cloneNode(true);
+  document.body.appendChild(dragging);
+
+  const rect = el.getBoundingClientRect();
+  dragging.style.width = rect.width + "px";
+  dragging.style.height = rect.height + "px";
+
+  dragging.style.position = "fixed";
+  dragging.style.left = rect.left + "px";
+  dragging.style.top = rect.top + "px";
+
+  dragging.style.pointerEvents = "all";
+  dragging.style.zIndex = "1000";
+  dragging.style.opacity = "0.9";
+
+  // ✅ capture HERE instead
+  dragging.setPointerCapture(e.pointerId);
+
+  dragState = {
+    type: 'pool',
+    name: taskName
+  };
+
+  window.addEventListener("pointermove", onPoolMove);
+  window.addEventListener("pointerup", onPoolUp);
+}
+
+let raf;
+function onPoolMove(e){
+  if(!dragState || dragState.type !== 'pool') return;
+  if(raf) cancelAnimationFrame(raf);
+
+  raf = requestAnimationFrame(()=>{
+    dragging.style.left = (e.clientX - dragging.offsetWidth/2) + "px";
+    dragging.style.top  = (e.clientY - dragging.offsetHeight/2) + "px";
+  });
+}
+
+function onPoolUp(e){
+  if(!dragState || dragState.type !== 'pool') return;
+
+  const cal = document.getElementById('events-col');
+  const rect = cal.getBoundingClientRect();
+
+  // ✅ Check if dropped inside calendar
+  if(
+    e.clientX >= rect.left &&
+    e.clientX <= rect.right &&
+    e.clientY >= rect.top &&
+    e.clientY <= rect.bottom
+  ){
+    const scroll = document.getElementById('cal-scroll').scrollTop;
+    const y = e.clientY - rect.top + scroll;
+
+    const start = yToTime(y);
+    const end = yToTime(y + HOUR);
+
+    getEvents(selectedDate).push({
+      id: uid(),
+      name: dragState.name,
+      start,
+      end,
+      type: 'task-ev',
+      done: false
+    });
+
+    // remove from pool
+    poolTasks = poolTasks.filter(t => t.name !== dragState.name);
+
+    renderAll();
+    scheduleSave();
+  }
+
+  // reset UI
+  dragging.style.position = "";
+  dragging.style.zIndex = "";
+  dragging.style.left = "";
+  dragging.style.top = "";
+
+  try {
+    dragging.releasePointerCapture(e.pointerId);
+  } catch {}
+  dragging.remove();
+  dragging = null;
+  dragState = null;
+
+  window.addEventListener("pointermove", onPoolMove);
+  window.addEventListener("pointerup", onPoolUp);
+}
+
+document.addEventListener("pointercancel", onPoolUp);
 
 function addPoolTask(){
   const inp=document.getElementById('pool-input'), name=inp.value.trim(); if(!name) return;
@@ -298,18 +476,6 @@ function addPoolTask(){
 document.getElementById('pool-input').addEventListener('keydown',e=>{ if(e.key==='Enter') addPoolTask(); });
 
 const evCol=document.getElementById('events-col');
-evCol.addEventListener('dragover',e=>{ e.preventDefault(); evCol.classList.add('drag-over'); });
-evCol.addEventListener('dragleave',()=>evCol.classList.remove('drag-over'));
-evCol.addEventListener('drop',e=>{
-  e.preventDefault(); evCol.classList.remove('drag-over');
-  const poolId=e.dataTransfer.getData('poolId'); if(!poolId) return;
-  const task=poolTasks.find(t=>t.id===poolId); if(!task) return;
-  const rect=evCol.getBoundingClientRect(), y=e.clientY-rect.top;
-  const s=Math.round(y/SNAP)*SNAP, startT=yToTime(s), endT=yToTime(s+HOUR);
-  getEvents(selectedDate).push({id:uid(),name:task.name,start:startT,end:endT,type:'task-ev',done:false});
-  poolTasks=poolTasks.filter(t=>t.id!==poolId);
-  renderAll(); scheduleSave();
-});
 
 // MODAL
 function openModal(isUnforeseen){
@@ -389,7 +555,15 @@ async function saveFile(data){
 async function initDrive(){
   try{
     const fid=await getOrCreateFolder(), fileId=await findFile(fid);
-    if(fileId){ driveFileId=fileId; const data=await loadFile(fileId); if(data.poolTasks) poolTasks=data.poolTasks; if(data.events) events=data.events; setStatus('Synced ✓','var(--green)'); setTimeout(()=>setStatus(''),2500); }
+    if(fileId){ 
+      driveFileId=fileId; 
+      const data=await loadFile(fileId); 
+      if(data.poolTasks) poolTasks=data.poolTasks; 
+      if(data.events) events=data.events; 
+      if(data.routineTemplates) routineTemplates = data.routineTemplates;
+      setStatus('Synced ✓','var(--green)'); 
+      setTimeout(()=>setStatus(''),2500); 
+    }
     else { setStatus('Ready','var(--green)'); setTimeout(()=>setStatus(''),2000); }
     renderAll(); scrollToNow();
   } catch(err){ setStatus('Drive error','var(--red)'); console.error(err); }
@@ -403,16 +577,46 @@ async function loadFile(fileId){
 function scheduleSave(){
   if(!accessToken) return;
   setStatus('Unsaved…'); clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
-    setStatus('Saving…');
-    try{ await saveFile({poolTasks,events,savedAt:new Date().toISOString()}); setStatus('Saved ✓','var(--green)'); setTimeout(()=>setStatus(''),2000); }
-    catch(err){ setStatus('Save failed','var(--red)'); console.error(err); }
-  },1500);
+  saveTimer = setTimeout(async()=>{
+  const data = { poolTasks, events, routineTemplates, savedAt:new Date().toISOString() };
+
+  // ✅ ALWAYS save locally
+  localStorage.setItem('planner', JSON.stringify(data));
+
+  if(!accessToken){
+    setStatus('Saved locally ✓','var(--green)');
+    setTimeout(()=>setStatus(''),2000);
+    return;
+  }
+
+  setStatus('Saving…');
+  try{
+    await saveFile(data);
+    setStatus('Saved ✓','var(--green)');
+    setTimeout(()=>setStatus(''),2000);
+  }catch(err){
+    setStatus('Drive failed (saved locally)','var(--red)');
+    console.error(err);
+  }
+},1500);
 }
 
 // INIT
 if(location.protocol==='file:') document.getElementById('banner').classList.add('show');
-poolTasks=['Review tutorials','Call Emily','Talk to immigration agent','Work on personal project','Check emails'].map(name=>({id:uid(),name}));
+const saved = localStorage.getItem('planner');
+if(saved){
+  try{
+    const data = JSON.parse(saved);
+    if(data.poolTasks) poolTasks = data.poolTasks;
+    if(data.events) events = data.events;
+    if(data.routineTemplates) routineTemplates = data.routineTemplates;
+  }catch(e){
+    console.error('Local load failed', e);
+  }
+}else{
+  poolTasks = ['Review tutorials','Call Emily','Talk to immigration agent','Work on personal project','Check emails']
+    .map(name=>({id:uid(),name}));
+}
 renderAll(); scrollToNow();
 setInterval(()=>{ renderGrid(); renderEvents(); },60000);
 </script>
