@@ -13,7 +13,7 @@
   --text:#1a1714;--text2:#6b6259;--text3:#a89e94;
   --accent:#c17f4a;--accent-light:#f5e6d5;
   --green:#5a9e6e;--red:#e07070;--blue:#7e9ff0;
-  --hour:64px;--pool:224px;
+  --hour:120px;--pool:224px;
 }
 body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:13px}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
@@ -173,8 +173,11 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const FILE_NAME = 'planner-data.json';
 const FOLDER_NAME = 'Planner';
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const HOUR = 64;
-const SNAP = 16;
+const HOUR = 120;
+const SNAP = 20;
+const SNAP_VISUAL = 20;
+const TIME_STEP = SNAP;  
+const DEFAULT_EVENT = SNAP * 2;
 
 let routineTemplates = [
   {name:'Exercise', start:'07:30',end:'08:30',type:'routine-ev'},
@@ -200,7 +203,11 @@ let dragging = null;
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function dateStr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function timeToY(t){ const [h,m]=t.split(':').map(Number); return (h+m/60)*HOUR; }
-function yToTime(y){ const c=Math.max(0,Math.min(Math.round((y/HOUR)*60/15)*15,23*60+45)); return `${String(Math.floor(c/60)).padStart(2,'0')}:${String(c%60).padStart(2,'0')}`; }
+function yToTime(y){
+  const minutes = Math.round((y / HOUR) * 60 / 10) * 10;
+  const clamped = Math.max(0, Math.min(minutes, 23 * 60 + 50));
+  return `${String(Math.floor(clamped/60)).padStart(2,'0')}:${String(clamped%60).padStart(2,'0')}`;
+}
 function fmtTime(t){ const [h,m]=t.split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')}${h<12?'am':'pm'}`; }
 
 function getEvents(d){
@@ -239,10 +246,20 @@ function renderGrid(){
   tc.innerHTML=''; ec.querySelectorAll('.hour-line,.half-line,.now-line').forEach(e=>e.remove());
   for(let h=0;h<24;h++){
     const y=h*HOUR;
-    const lbl=document.createElement('div'); lbl.className='time-label'; lbl.style.top=y+'px';
-    lbl.textContent=h===0?'':`${h%12||12}${h<12?'am':'pm'}`; tc.appendChild(lbl);
-    const hl=document.createElement('div'); hl.className='hour-line'; hl.style.top=y+'px'; ec.appendChild(hl);
-    const hf=document.createElement('div'); hf.className='half-line'; hf.style.top=(y+32)+'px'; ec.appendChild(hf);
+    const lbl=document.createElement('div'); 
+    lbl.className='time-label'; 
+    lbl.style.top=y+'px';
+    lbl.textContent=h===0?'':`${h%12||12}${h<12?'am':'pm'}`; 
+    tc.appendChild(lbl);
+    const hl=document.createElement('div'); 
+    hl.className='hour-line'; 
+    hl.style.top=y+'px'; 
+    ec.appendChild(hl);
+    let hf=document.createElement('div'); 
+    hf.className='half-line'; 
+    hf.style.top=(y+32)+'px'; 
+    ec.appendChild(hf);
+    hf.style.top = y + HOUR/2 + 'px';
   }
   if(dateStr(new Date())===dateStr(selectedDate)){
     const now=new Date(), ny=(now.getHours()+now.getMinutes()/60)*HOUR;
@@ -255,10 +272,11 @@ function renderGrid(){
 function renderEvents(){
   const col=document.getElementById('events-col'); col.querySelectorAll('.cal-event').forEach(e=>e.remove());
   getEvents(selectedDate).forEach(ev=>{
-    const top=timeToY(ev.start), h=Math.max(timeToY(ev.end)-top,28);
     const el=document.createElement('div');
     el.className=`cal-event ${ev.type}${ev.done?' done-ev':''}`;
-    el.style.top=top+'px'; el.style.height=h+'px'; el.dataset.id=ev.id;
+    el.style.top = timeToY(ev.start) + 'px';
+    el.style.height = Math.max(timeToY(ev.end)-timeToY(ev.start), SNAP) + 'px'; 
+    el.dataset.id=ev.id;
     el.innerHTML=`<div class="ev-title">${ev.name}</div><div class="ev-time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div><div class="ev-actions"><div class="ev-check${ev.done?' checked':''}" data-id="${ev.id}">${ev.done?'✓':''}</div><div class="ev-del" data-id="${ev.id}">✕</div></div><div class="ev-resize" data-id="${ev.id}"></div>`;
     el.querySelector('.ev-check').addEventListener('click',e=>{ e.stopPropagation(); const x=getEvents(selectedDate).find(x=>x.id===ev.id); if(x){x.done=!x.done; renderEvents(); scheduleSave();} });
     el.querySelector('.ev-del').addEventListener('click',e=>{
@@ -293,7 +311,8 @@ function renderEvents(){
 function onMoveDown(e){
   if(['ev-resize','ev-check','ev-del'].some(c=>e.target.classList.contains(c))) return;
   e.preventDefault();
-  const el=e.currentTarget, ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); if(!ev) return;
+  const el=e.currentTarget, ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); 
+  if(!ev) return;
   dragState={type:'move',id:ev.id,startY:e.clientY,origTop:timeToY(ev.start),dur:timeToY(ev.end)-timeToY(ev.start)};
   document.addEventListener("pointermove", onDragMove); document.addEventListener("pointerup", onDragUp);
 
@@ -311,7 +330,7 @@ function onResizeDown(e){
   e.stopPropagation();
 
   const handle = e.currentTarget;
-  handle.setPointerCapture(e.pointerId); // ✅ ADD THIS
+  handle.setPointerCapture(e.pointerId);
 
   const id = handle.dataset.id;
   const ev = getEvents(selectedDate).find(x=>x.id===id);
@@ -330,14 +349,20 @@ function onResizeDown(e){
 
 function onDragMove(e){
   if(!dragState) return;
-  const ev=getEvents(selectedDate).find(x=>x.id===dragState.id); if(!ev) return;
+  const ev=getEvents(selectedDate).find(x=>x.id===dragState.id); 
+  if(!ev) return;
   const dy=e.clientY-dragState.startY;
   if(dragState.type==='move'){
     let t=Math.max(0,Math.min(dragState.origTop+dy,HOUR*24-dragState.dur));
     const s=Math.round(t/SNAP)*SNAP; ev.start=yToTime(s); ev.end=yToTime(s+dragState.dur);
-  } else {
-    const sy=timeToY(ev.start), ne=Math.max(sy+SNAP,Math.min(dragState.origEnd+dy,HOUR*24));
-    ev.end=yToTime(Math.round(ne/SNAP)*SNAP);
+  } else {//resize
+    const sy = timeToY(ev.start);
+    let ne = dragState.origEnd + dy;
+
+    ne = Math.max(sy + TIME_STEP, ne); // minimum 10 min
+    ne = Math.min(ne, HOUR * 24);
+
+    ev.end = yToTime(Math.round(ne / TIME_STEP) * TIME_STEP);
   }
   renderEvents();
 }
@@ -375,6 +400,7 @@ function onPoolDown(e){
 
   const el = e.currentTarget;
   const taskName = el.querySelector('.pool-task-name').textContent;
+  const taskId = el.querySelector('.pool-task-del').dataset.id;
 
   dragging = el.cloneNode(true);
   document.body.appendChild(dragging);
@@ -396,6 +422,7 @@ function onPoolDown(e){
 
   dragState = {
     type: 'pool',
+    id: taskId,
     name: taskName
   };
 
@@ -406,6 +433,16 @@ function onPoolDown(e){
 let raf;
 function onPoolMove(e){
   if(!dragState || dragState.type !== 'pool') return;
+  const cal = document.getElementById('events-col');
+  const rect = cal.getBoundingClientRect();
+
+  const inside =
+    e.clientX >= rect.left &&
+    e.clientX <= rect.right &&
+    e.clientY >= rect.top &&
+    e.clientY <= rect.bottom;
+
+  cal.classList.toggle('drag-over', inside);
   if(raf) cancelAnimationFrame(raf);
 
   raf = requestAnimationFrame(()=>{
@@ -416,24 +453,35 @@ function onPoolMove(e){
 
 function onPoolUp(e){
   if(!dragState || dragState.type !== 'pool') return;
-
+  dragging.style.pointerEvents = "none";
+  dragging.style.pointerEvents = "all";
+  const el = document.elementFromPoint(e.clientX, e.clientY);
   const cal = document.getElementById('events-col');
   const rect = cal.getBoundingClientRect();
+  const isInside = e.clientX >= rect.left &&
+  e.clientX <= rect.right &&
+  e.clientY >= rect.top &&
+  e.clientY <= rect.bottom;
+  const originalTask = poolTasks.find(t => t.id === dragState.id);
 
-  // ✅ Check if dropped inside calendar
-  if(
-    e.clientX >= rect.left &&
-    e.clientX <= rect.right &&
-    e.clientY >= rect.top &&
-    e.clientY <= rect.bottom
-  ){
+  if(isInside){
     const scroll = document.getElementById('cal-scroll').scrollTop;
-    const y = e.clientY - rect.top + scroll;
+    let y = e.clientY - rect.top + cal.scrollTop;
+
+    // snap to grid
+    y = Math.max(0, Math.min(y, HOUR * 24 - SNAP));
+    y = Math.round(y / SNAP) * SNAP;
+
 
     const start = yToTime(y);
-    const end = yToTime(y + HOUR);
+    const end = yToTime(y + DEFAULT_EVENT);
 
-    getEvents(selectedDate).push({
+    const evs = getEvents(selectedDate);
+
+    let newStartY = y;
+    let newEndY = y + SNAP;
+
+    evs.push({
       id: uid(),
       name: dragState.name,
       start,
@@ -442,28 +490,24 @@ function onPoolUp(e){
       done: false
     });
 
-    // remove from pool
-    poolTasks = poolTasks.filter(t => t.name !== dragState.name);
+    poolTasks = poolTasks.filter(t => t.id !== dragState.id);
 
     renderAll();
     scheduleSave();
+  } else {
+    renderPool();
   }
-
-  // reset UI
-  dragging.style.position = "";
-  dragging.style.zIndex = "";
-  dragging.style.left = "";
-  dragging.style.top = "";
 
   try {
     dragging.releasePointerCapture(e.pointerId);
   } catch {}
+
   dragging.remove();
   dragging = null;
   dragState = null;
 
-  window.addEventListener("pointermove", onPoolMove);
-  window.addEventListener("pointerup", onPoolUp);
+  window.removeEventListener("pointermove", onPoolMove);
+  window.removeEventListener("pointerup", onPoolUp);
 }
 
 document.addEventListener("pointercancel", onPoolUp);
@@ -479,7 +523,7 @@ const evCol=document.getElementById('events-col');
 
 // MODAL
 function openModal(isUnforeseen){
-  const now=new Date(), h=String(now.getHours()).padStart(2,'0'), m=String(Math.round(now.getMinutes()/15)*15%60).padStart(2,'0'), eh=String(Math.min(now.getHours()+1,23)).padStart(2,'0');
+  const now=new Date(), h=String(now.getHours()).padStart(2,'0'), m=String(Math.round(now.getMinutes()/10)*10%60).padStart(2,'0'), eh=String(Math.min(now.getHours()+1,23)).padStart(2,'0');
   document.getElementById('m-name').value=''; document.getElementById('m-start').value=`${h}:${m}`; document.getElementById('m-end').value=`${eh}:${m}`;
   document.getElementById('m-type').value=isUnforeseen?'unforeseen-ev':'task-ev';
   document.getElementById('modal-title').textContent=isUnforeseen?'Unforeseen task':'Add task';
