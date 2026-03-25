@@ -13,7 +13,7 @@
   --text:#1a1714;--text2:#6b6259;--text3:#a89e94;
   --accent:#c17f4a;--accent-light:#f5e6d5;
   --green:#5a9e6e;--red:#e07070;--blue:#7e9ff0;
-  --hour:360px;--pool:224px;
+  --hour:240px;--pool:224px;
 }
 body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:13px}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
@@ -41,10 +41,10 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .wp-header .settings-title{flex:1}
 .wp-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
 .wp-grid{display:flex;min-width:max-content;position:relative}
-.wp-time-col{width:40px;flex-shrink:0;position:relative;height:2880px}
+.wp-time-col{width:40px;flex-shrink:0;position:relative;height:5760px}
 .wp-time-label{position:absolute;font-size:9px;color:var(--text3);right:6px;transform:translateY(-50%);font-family:'DM Mono',monospace}
 .wp-days{display:flex;flex:1}
-.wp-day-col{flex:1;min-width:80px;position:relative;border-left:1px solid var(--border);height:2880px}
+.wp-day-col{flex:1;min-width:80px;position:relative;border-left:1px solid var(--border);height:5760px}
 .wp-day-header{position:sticky;top:0;background:var(--surface);z-index:10;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border)}
 .wp-hour-line{position:absolute;left:0;right:0;border-top:1px solid var(--border);pointer-events:none}
 .wp-half-line{position:absolute;left:0;right:0;border-top:1px dashed var(--border);opacity:0.5;pointer-events:none}
@@ -111,8 +111,6 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-del:hover{color:var(--red)}
 .ev-resize{position:absolute;bottom:0;left:0;right:0;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
-.fab{position:fixed;bottom:22px;right:22px;background:var(--red);color:#fff;border:none;border-radius:50px;padding:9px 16px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;box-shadow:0 4px 16px rgba(224,112,112,0.3);z-index:100;transition:transform 0.1s}
-.fab:hover{transform:scale(1.04)}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:14px;padding:22px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
@@ -183,7 +181,6 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   </div>
 </div>
 
-<button class="fab" onclick="openModal(true)">+ Unforeseen</button>
 
 <div class="settings-panel" id="settings-panel">
   <div class="settings-header">
@@ -245,7 +242,7 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const FILE_NAME = 'planner-data.json';
 const FOLDER_NAME = 'Planner';
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const HOUR = 360;
+const HOUR = 240;
 const SNAP = 40;
 const TIME_STEP = SNAP;  
 const DEFAULT_EVENT = SNAP * 2;
@@ -609,11 +606,11 @@ document.getElementById('pool-input').addEventListener('keydown',e=>{ if(e.key==
 const evCol=document.getElementById('events-col');
 
 // MODAL
-function openModal(isUnforeseen){
+function openModal(){
   const now=new Date(), h=String(now.getHours()).padStart(2,'0'), m=String(Math.round(now.getMinutes()/10)*10%60).padStart(2,'0'), eh=String(Math.min(now.getHours()+1,23)).padStart(2,'0');
   document.getElementById('m-name').value=''; document.getElementById('m-start').value=`${h}:${m}`; document.getElementById('m-end').value=`${eh}:${m}`;
-  document.getElementById('m-type').value=isUnforeseen?'unforeseen-ev':'task-ev';
-  document.getElementById('modal-title').textContent=isUnforeseen?'Unforeseen task':'Add task';
+  document.getElementById('m-type').value='task-ev';
+  document.getElementById('modal-title').textContent='Add task';
   document.getElementById('modal-bg').classList.add('open');
   modalCb=({name,start,end,type})=>{
     const evs=getEvents(selectedDate), sy=timeToY(start), ey=timeToY(end);
@@ -935,6 +932,15 @@ function openTemplateModal(preDay,editId){
     };
   }
   setTimeout(()=>document.getElementById('m-name').focus(),50);
+}
+
+const isTest = window.location.hostname !== 'shimmering-sorbet-05c5d8.netlify.app';
+if (isTest) {
+  document.body.insertAdjacentHTML('beforeend',
+    `<div style="position:fixed;bottom:0;width:100%;background:orange;text-align:center;padding:8px;z-index:9999">
+      ⚠️ TEST VERSION
+    </div>`
+  );
 }
 </script>
 </body>
