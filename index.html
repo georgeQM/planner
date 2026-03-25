@@ -13,7 +13,7 @@
   --text:#1a1714;--text2:#6b6259;--text3:#a89e94;
   --accent:#c17f4a;--accent-light:#f5e6d5;
   --green:#5a9e6e;--red:#e07070;--blue:#7e9ff0;
-  --hour:120px;--pool:224px;
+  --hour:360px;--pool:224px;
 }
 body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:13px}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;gap:12px}
@@ -24,6 +24,37 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 #auth-btn{font-family:'DM Mono',monospace;font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all 0.15s}
 #auth-btn:hover{border-color:var(--accent);color:var(--accent)}
 #auth-btn.connected{border-color:var(--green);color:var(--green)}
+#gear-btn{font-family:'DM Mono',monospace;font-size:15px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text2);cursor:pointer;line-height:1;transition:all 0.15s}
+#gear-btn:hover{border-color:var(--accent);color:var(--accent)}
+.settings-panel{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;flex-direction:column}
+.settings-panel.open{display:flex}
+.settings-header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
+.settings-back{font-family:'DM Mono',monospace;font-size:13px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text2);cursor:pointer;transition:all 0.15s}
+.settings-back:hover{border-color:var(--accent);color:var(--accent)}
+.settings-title{font-family:'Fraunces',serif;font-size:17px;font-weight:500;color:var(--text)}
+.settings-body{padding:16px;display:flex;flex-direction:column;gap:8px}
+.settings-row{display:flex;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);cursor:pointer;transition:all 0.15s}
+.settings-row:hover{border-color:var(--accent);color:var(--accent)}
+.week-planner-panel{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;flex-direction:column}
+.week-planner-panel.open{display:flex}
+.wp-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.wp-header .settings-title{flex:1}
+.wp-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+.wp-grid{display:flex;min-width:max-content;position:relative}
+.wp-time-col{width:40px;flex-shrink:0;position:relative;height:2880px}
+.wp-time-label{position:absolute;font-size:9px;color:var(--text3);right:6px;transform:translateY(-50%);font-family:'DM Mono',monospace}
+.wp-days{display:flex;flex:1}
+.wp-day-col{flex:1;min-width:80px;position:relative;border-left:1px solid var(--border);height:2880px}
+.wp-day-header{position:sticky;top:0;background:var(--surface);z-index:10;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border)}
+.wp-hour-line{position:absolute;left:0;right:0;border-top:1px solid var(--border);pointer-events:none}
+.wp-half-line{position:absolute;left:0;right:0;border-top:1px dashed var(--border);opacity:0.5;pointer-events:none}
+.wp-event{position:absolute;left:3px;right:3px;border-radius:7px;padding:3px 22px 3px 6px;font-size:10px;background:#fff8f2;border:1.5px solid var(--accent);overflow:hidden;box-sizing:border-box}
+.wp-event-title{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wp-event-time{font-size:9px;color:var(--text2)}
+.wp-event-del{position:absolute;top:3px;right:4px;font-size:10px;color:var(--text3);cursor:pointer;line-height:1}
+.wp-event-del:hover{color:var(--red)}
+.wp-event-edit{position:absolute;top:3px;right:18px;font-size:10px;color:var(--text3);cursor:pointer;line-height:1}
+.wp-event-edit:hover{color:var(--blue)}
 .banner{font-size:11px;color:var(--text2);background:#fffbe6;border-bottom:1px solid #f0e08a;padding:6px 18px;flex-shrink:0;display:none;line-height:1.5}
 .banner.show{display:block}
 .week-strip{display:flex;gap:4px;background:var(--surface);padding:0 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -82,7 +113,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
 .fab{position:fixed;bottom:22px;right:22px;background:var(--red);color:#fff;border:none;border-radius:50px;padding:9px 16px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;box-shadow:0 4px 16px rgba(224,112,112,0.3);z-index:100;transition:transform 0.1s}
 .fab:hover{transform:scale(1.04)}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:200;align-items:center;justify-content:center}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:14px;padding:22px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
 .modal h3{font-family:'Fraunces',serif;font-size:17px;margin-bottom:14px;font-weight:500}
@@ -106,6 +137,12 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 #events-col, .pool-task {
   touch-action: none;
 }
+.field-label{font-size:10px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;display:block}
+#m-recur-wrap{margin-bottom:8px}
+.recur-days-row{display:flex;gap:5px;flex-wrap:wrap}
+.recur-days-row label{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--border);border-radius:50%;font-size:11px;cursor:pointer;transition:all 0.15s;user-select:none}
+.recur-days-row label:has(input:checked){background:var(--accent);border-color:var(--accent);color:#fff}
+.recur-days-row input[type=checkbox]{display:none}
 </style>
 </head>
 <body>
@@ -114,6 +151,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   <div class="logo">day<span>.</span>plan</div>
   <div class="topbar-right">
     <span id="sync-status"></span>
+    <button id="gear-btn" onclick="openSettings()">⚙</button>
     <button id="auth-btn" onclick="handleAuth()">Connect Drive</button>
   </div>
 </div>
@@ -147,9 +185,31 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 
 <button class="fab" onclick="openModal(true)">+ Unforeseen</button>
 
+<div class="settings-panel" id="settings-panel">
+  <div class="settings-header">
+    <button class="settings-back" onclick="closeSettings()">← Back</button>
+    <span class="settings-title">Settings</span>
+  </div>
+  <div class="settings-body">
+    <button class="settings-row" onclick="openWeekPlanner()">Plan Your Week</button>
+  </div>
+</div>
+
+<div class="week-planner-panel" id="week-planner-panel">
+  <div class="wp-header">
+    <button class="settings-back" onclick="closeWeekPlanner()">← Back</button>
+    <span class="settings-title">Plan Your Week</span>
+    <button class="mbtn primary" onclick="openTemplateModal()">+ Add</button>
+  </div>
+  <div class="wp-scroll">
+    <div class="wp-grid" id="wp-grid"></div>
+  </div>
+</div>
+
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3 id="modal-title">Add task</h3>
+    <p id="modal-note" style="display:none;font-size:12px;color:var(--text3);margin:-4px 0 8px;">Changes apply to future days only</p>
     <input id="m-name" type="text" placeholder="Task name">
     <div class="time-row">
       <input id="m-start" type="time">
@@ -160,9 +220,21 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
       <option value="task-ev">Regular task</option>
       <option value="routine-ev">Routine</option>
     </select>
+    <div id="m-recur-wrap" style="display:none">
+      <span class="field-label">Repeat on:</span>
+      <div id="m-recur-days" class="recur-days-row">
+        <label><input type="checkbox" name="recur" value="0">S</label>
+        <label><input type="checkbox" name="recur" value="1">M</label>
+        <label><input type="checkbox" name="recur" value="2">T</label>
+        <label><input type="checkbox" name="recur" value="3">W</label>
+        <label><input type="checkbox" name="recur" value="4">T</label>
+        <label><input type="checkbox" name="recur" value="5">F</label>
+        <label><input type="checkbox" name="recur" value="6">S</label>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="mbtn" onclick="closeModal()">Cancel</button>
-      <button class="mbtn primary" onclick="confirmModal()">Add to day</button>
+      <button id="modal-confirm-btn" class="mbtn primary" onclick="confirmModal()">Add to day</button>
     </div>
   </div>
 </div>
@@ -173,18 +245,12 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const FILE_NAME = 'planner-data.json';
 const FOLDER_NAME = 'Planner';
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const HOUR = 120;
-const SNAP = 20;
-const SNAP_VISUAL = 20;
+const HOUR = 360;
+const SNAP = 40;
 const TIME_STEP = SNAP;  
 const DEFAULT_EVENT = SNAP * 2;
 
-let routineTemplates = [
-  {name:'Exercise', start:'07:30',end:'08:30',type:'routine-ev'},
-  {name:'Deep work — study', start:'09:00',end:'11:00',type:'routine-ev'},
-  {name:'Importadora JV', start:'12:00',end:'13:00',type:'routine-ev'},
-  {name:'Deep work #2', start:'14:00',end:'16:00',type:'routine-ev'},
-];
+let weeklyPlan = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
 const today = new Date(); today.setHours(0,0,0,0);
 let selectedDate = new Date(today);
@@ -193,8 +259,10 @@ let events = {};
 let accessToken = null;
 let driveFileId = null;
 let folderId = null;
+let _savedUnforeseenOpt = null;
 let saveTimer = null;
 let dragState = null;
+let tapDownX = 0, tapDownY = 0, tapDidMove = false;
 let modalCb = null;
 let offsetX = 0;
 let offsetY = 0;
@@ -210,19 +278,30 @@ function yToTime(y){
 }
 function fmtTime(t){ const [h,m]=t.split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')}${h<12?'am':'pm'}`; }
 
-function getEvents(d){
-  const k=dateStr(d);
-  if(!events[k]){
-    events[k] = JSON.parse(JSON.stringify(routineTemplates)).map(t=>({
-      id: uid(),
-      name: t.name,
-      start: t.start,
-      end: t.end,
-      type: t.type,
-      done: false
-    }));
-    renderAll();
-    scrollToNow();
+function getEvents(d) {
+  const k = dateStr(d);
+  
+  // If no events exist for this date yet, check the Weekly Plan
+  if (events[k] === undefined) {
+    const dayOfWeek = d.getDay(); // 0-6
+    const dayTemplates = weeklyPlan[dayOfWeek] || [];
+
+    // Clone the template into the daily events
+    events[k] = dayTemplates
+      .filter(t => t.recurringDays && t.recurringDays.includes(dayOfWeek))
+      .map(t => ({
+        id: uid(),
+        name: t.name,
+        start: t.start,
+        end: t.end,
+        type: t.type + '-ev',
+        done: false,
+        fromTemplate: true,
+        templateId: t.id
+      }));
+    
+    // Save immediately so the instances persist
+    scheduleSave();
   }
   return events[k];
 }
@@ -302,7 +381,15 @@ function renderEvents(){
       scheduleSave();
     });
     el.querySelector('.ev-resize').addEventListener('pointerdown', onResizeDown);
-    el.addEventListener("pointerdown", onMoveDown);
+    el.addEventListener('pointerdown', e => {
+      tapDownX = e.clientX; tapDownY = e.clientY; tapDidMove = false;
+      onMoveDown(e);
+    });
+    el.addEventListener('pointerup', e => {
+      if (!tapDidMove && !['ev-check','ev-del','ev-resize'].some(c => e.target.classList.contains(c))) {
+        openEditModal(ev);
+      }
+    });
     col.appendChild(el);
   });
 }
@@ -349,7 +436,8 @@ function onResizeDown(e){
 
 function onDragMove(e){
   if(!dragState) return;
-  const ev=getEvents(selectedDate).find(x=>x.id===dragState.id); 
+  if (Math.abs(e.clientX - tapDownX) + Math.abs(e.clientY - tapDownY) > 5) tapDidMove = true;
+  const ev=getEvents(selectedDate).find(x=>x.id===dragState.id);
   if(!ev) return;
   const dy=e.clientY-dragState.startY;
   if(dragState.type==='move'){
@@ -465,8 +553,7 @@ function onPoolUp(e){
   const originalTask = poolTasks.find(t => t.id === dragState.id);
 
   if(isInside){
-    const scroll = document.getElementById('cal-scroll').scrollTop;
-    let y = e.clientY - rect.top + cal.scrollTop;
+    let y = e.clientY - rect.top;
 
     // snap to grid
     y = Math.max(0, Math.min(y, HOUR * 24 - SNAP));
@@ -536,10 +623,58 @@ function openModal(isUnforeseen){
   setTimeout(()=>document.getElementById('m-name').focus(),50);
 }
 
-function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); modalCb=null; }
+function openEditModal(ev){
+  document.getElementById('m-name').value=ev.name;
+  document.getElementById('m-start').value=ev.start;
+  document.getElementById('m-end').value=ev.end;
+  document.getElementById('m-type').value=ev.type;
+  document.getElementById('modal-title').textContent='Edit event';
+  document.getElementById('modal-confirm-btn').textContent='Save';
+  document.getElementById('modal-bg').classList.add('open');
+  modalCb=({name,start,end,type})=>{
+    const target=getEvents(selectedDate).find(x=>x.id===ev.id);
+    if(target){ target.name=name; target.start=start; target.end=end; target.type=type; }
+    renderEvents(); scheduleSave();
+  };
+  setTimeout(()=>document.getElementById('m-name').focus(),50);
+}
+
+function closeModal(){
+  document.getElementById('modal-bg').classList.remove('open');
+  document.getElementById('m-type').style.display='block';
+  document.getElementById('m-recur-wrap').style.display='none';
+  document.getElementById('modal-confirm-btn').textContent='Add to day';
+  document.getElementById('modal-title').textContent='Add task';
+  // restore unforeseen option if it was removed
+  if(_savedUnforeseenOpt){
+    const mtype=document.getElementById('m-type');
+    mtype.insertBefore(_savedUnforeseenOpt,mtype.firstChild);
+    _savedUnforeseenOpt=null;
+  }
+  // reset all recur checkboxes to checked
+  document.querySelectorAll('#m-recur-days input[name=recur]').forEach(c=>c.checked=true);
+  // clear validation highlights
+  document.getElementById('m-name').style.borderColor='';
+  document.getElementById('m-end').style.borderColor='';
+  document.getElementById('m-recur-wrap').style.borderColor='';
+  document.getElementById('modal-note').style.display='none';
+  modalCb=null;
+}
 function confirmModal(){
   const name=document.getElementById('m-name').value.trim(), start=document.getElementById('m-start').value, end=document.getElementById('m-end').value, type=document.getElementById('m-type').value;
-  if(!name||!start||!end) return; if(modalCb) modalCb({name,start,end,type}); closeModal();
+  const nameEl=document.getElementById('m-name'), endEl=document.getElementById('m-end');
+  let valid=true;
+  nameEl.style.borderColor=''; endEl.style.borderColor='';
+  if(!name){ nameEl.style.borderColor='var(--red)'; valid=false; }
+  if(!start||!end||end<=start){ endEl.style.borderColor='var(--red)'; valid=false; }
+  // template mode: check at least one day selected
+  if(document.getElementById('m-recur-wrap').style.display!=='none'){
+    const days=[...document.querySelectorAll('#m-recur-days input[name=recur]')].filter(c=>c.checked);
+    if(!days.length){ document.getElementById('m-recur-wrap').style.outline='1px solid var(--red)'; valid=false; }
+    else { document.getElementById('m-recur-wrap').style.outline=''; }
+  }
+  if(!valid) return;
+  if(modalCb) modalCb({name,start,end,type}); closeModal();
 }
 document.getElementById('m-name').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmModal(); });
 document.getElementById('modal-bg').addEventListener('click',e=>{ if(e.target===document.getElementById('modal-bg')) closeModal(); });
@@ -604,7 +739,7 @@ async function initDrive(){
       const data=await loadFile(fileId); 
       if(data.poolTasks) poolTasks=data.poolTasks; 
       if(data.events) events=data.events; 
-      if(data.routineTemplates) routineTemplates = data.routineTemplates;
+      if(data.weeklyPlan) weeklyPlan = data.weeklyPlan;
       setStatus('Synced ✓','var(--green)'); 
       setTimeout(()=>setStatus(''),2500); 
     }
@@ -619,30 +754,29 @@ async function loadFile(fileId){
 }
 
 function scheduleSave(){
-  if(!accessToken) return;
   setStatus('Unsaved…'); clearTimeout(saveTimer);
   saveTimer = setTimeout(async()=>{
-  const data = { poolTasks, events, routineTemplates, savedAt:new Date().toISOString() };
+    const data = { poolTasks, events, weeklyPlan, savedAt:new Date().toISOString() };
 
-  // ✅ ALWAYS save locally
-  localStorage.setItem('planner', JSON.stringify(data));
+    // Always save locally
+    localStorage.setItem('planner', JSON.stringify(data));
 
-  if(!accessToken){
-    setStatus('Saved locally ✓','var(--green)');
-    setTimeout(()=>setStatus(''),2000);
-    return;
-  }
+    if(!accessToken){
+      setStatus('Saved locally ✓','var(--green)');
+      setTimeout(()=>setStatus(''),2000);
+      return;
+    }
 
-  setStatus('Saving…');
-  try{
-    await saveFile(data);
-    setStatus('Saved ✓','var(--green)');
-    setTimeout(()=>setStatus(''),2000);
-  }catch(err){
-    setStatus('Drive failed (saved locally)','var(--red)');
-    console.error(err);
-  }
-},1500);
+    setStatus('Saving…');
+    try{
+      await saveFile(data);
+      setStatus('Saved ✓','var(--green)');
+      setTimeout(()=>setStatus(''),2000);
+    }catch(err){
+      setStatus('Drive failed (saved locally)','var(--red)');
+      console.error(err);
+    }
+  },1500);
 }
 
 // INIT
@@ -653,7 +787,7 @@ if(saved){
     const data = JSON.parse(saved);
     if(data.poolTasks) poolTasks = data.poolTasks;
     if(data.events) events = data.events;
-    if(data.routineTemplates) routineTemplates = data.routineTemplates;
+    if(data.weeklyPlan) weeklyPlan = data.weeklyPlan;
   }catch(e){
     console.error('Local load failed', e);
   }
@@ -663,6 +797,145 @@ if(saved){
 }
 renderAll(); scrollToNow();
 setInterval(()=>{ renderGrid(); renderEvents(); },60000);
+
+function openSettings(){
+  document.getElementById('settings-panel').classList.add('open');
+  history.pushState({panel:'settings'},'');
+}
+function closeSettings(){
+  document.getElementById('settings-panel').classList.remove('open');
+}
+window.addEventListener('popstate',()=>{
+  if(document.getElementById('week-planner-panel').classList.contains('open')){
+    closeWeekPlanner();
+    history.pushState({panel:'settings'},'');
+  } else if(document.getElementById('settings-panel').classList.contains('open')){
+    closeSettings();
+  }
+});
+
+const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const WP_HEADER_H=28;
+
+function openWeekPlanner(){
+  document.getElementById('week-planner-panel').classList.add('open');
+  history.pushState({panel:'weekplanner'},'');
+  renderWeekPlan();
+}
+function closeWeekPlanner(){
+  document.getElementById('week-planner-panel').classList.remove('open');
+}
+function renderWeekPlan(){
+  const grid=document.getElementById('wp-grid');
+  grid.innerHTML='';
+  const timeCol=document.createElement('div');
+  timeCol.className='wp-time-col';
+  for(let h=1;h<24;h++){
+    const lbl=document.createElement('div');
+    lbl.className='wp-time-label';
+    lbl.style.top=(h*HOUR+WP_HEADER_H)+'px';
+    lbl.textContent=`${h%12||12}${h<12?'am':'pm'}`;
+    timeCol.appendChild(lbl);
+  }
+  grid.appendChild(timeCol);
+  const daysWrap=document.createElement('div');
+  daysWrap.className='wp-days';
+  for(let d=0;d<7;d++){
+    const col=document.createElement('div');
+    col.className='wp-day-col';
+    const hdr=document.createElement('div');
+    hdr.className='wp-day-header';
+    hdr.textContent=DAY_NAMES[d];
+    col.appendChild(hdr);
+    for(let h=0;h<24;h++){
+      const hl=document.createElement('div');
+      hl.className='wp-hour-line';
+      hl.style.top=(h*HOUR+WP_HEADER_H)+'px';
+      col.appendChild(hl);
+      const hf=document.createElement('div');
+      hf.className='wp-half-line';
+      hf.style.top=(h*HOUR+HOUR/2+WP_HEADER_H)+'px';
+      col.appendChild(hf);
+    }
+    (weeklyPlan[d]||[]).forEach(t=>{
+      const el=document.createElement('div');
+      el.className='wp-event';
+      el.style.top=(timeToY(t.start)+WP_HEADER_H)+'px';
+      el.style.height=Math.max(timeToY(t.end)-timeToY(t.start),SNAP)+'px';
+      el.innerHTML=`<div class="wp-event-title">${t.name}</div><div class="wp-event-time">${fmtTime(t.start)}–${fmtTime(t.end)}</div><div class="wp-event-edit" data-id="${t.id}">✎</div><div class="wp-event-del" data-id="${t.id}">✕</div>`;
+      el.querySelector('.wp-event-del').addEventListener('pointerup',e=>{
+        e.stopPropagation();
+        const id=e.target.dataset.id;
+        for(let i=0;i<7;i++) weeklyPlan[i]=weeklyPlan[i].filter(x=>x.id!==id);
+        scheduleSave(); renderWeekPlan();
+      });
+      el.querySelector('.wp-event-edit').addEventListener('pointerup',e=>{
+        e.stopPropagation();
+        openTemplateModal(null,e.target.dataset.id);
+      });
+      col.appendChild(el);
+    });
+    daysWrap.appendChild(col);
+  }
+  grid.appendChild(daysWrap);
+}
+function openTemplateModal(preDay,editId){
+  const mtype=document.getElementById('m-type');
+  // remove unforeseen option for template mode
+  _savedUnforeseenOpt=mtype.querySelector('option[value="unforeseen-ev"]');
+  if(_savedUnforeseenOpt) _savedUnforeseenOpt.remove();
+
+  // show recur checkboxes, hide type selector
+  document.getElementById('m-type').style.display='block';
+  mtype.value='routine-ev';
+  document.getElementById('m-recur-wrap').style.display='block';
+  document.getElementById('m-recur-wrap').style.outline='';
+  document.getElementById('modal-confirm-btn').textContent='Save';
+  document.getElementById('modal-bg').classList.add('open');
+
+  const checkboxes=document.querySelectorAll('#m-recur-days input[name=recur]');
+
+  if(editId){
+    // edit mode: find template across all days
+    let original=null;
+    for(let i=0;i<7;i++){
+      original=(weeklyPlan[i]||[]).find(t=>t.id===editId);
+      if(original) break;
+    }
+    if(!original){ closeModal(); return; }
+    document.getElementById('m-name').value=original.name;
+    document.getElementById('m-start').value=original.start;
+    document.getElementById('m-end').value=original.end;
+    mtype.value=(original.type||'routine')+'-ev';
+    checkboxes.forEach(c=>{ c.checked=original.recurringDays.includes(+c.value); });
+    document.getElementById('modal-title').textContent='Edit Routine';
+    document.getElementById('modal-note').style.display='block';
+    modalCb=({name,start,end,type})=>{
+      const days=[...checkboxes].filter(c=>c.checked).map(c=>+c.value);
+      const typeName=type.replace('-ev','');
+      const updated={id:editId,name,start,end,type:typeName,recurringDays:days,createdAt:original.createdAt};
+      for(let i=0;i<7;i++) weeklyPlan[i]=(weeklyPlan[i]||[]).filter(t=>t.id!==editId);
+      days.forEach(d=>weeklyPlan[d].push({...updated}));
+      scheduleSave(); renderWeekPlan();
+    };
+  } else {
+    // add mode
+    document.getElementById('m-name').value='';
+    document.getElementById('m-start').value='09:00';
+    document.getElementById('m-end').value='10:00';
+    document.getElementById('modal-title').textContent='Add Routine';
+    // default: check all days, or just preDay if provided
+    checkboxes.forEach(c=>{ c.checked=(preDay==null)?true:(+c.value===preDay); });
+    modalCb=({name,start,end,type})=>{
+      const days=[...checkboxes].filter(c=>c.checked).map(c=>+c.value);
+      const typeName=type.replace('-ev','');
+      const t={id:uid(),name,start,end,type:typeName,recurringDays:days,createdAt:new Date().toISOString()};
+      days.forEach(d=>weeklyPlan[d].push({...t}));
+      scheduleSave(); renderWeekPlan();
+    };
+  }
+  setTimeout(()=>document.getElementById('m-name').focus(),50);
+}
 </script>
 </body>
 </html>
