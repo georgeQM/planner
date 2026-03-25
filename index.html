@@ -111,8 +111,6 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-del:hover{color:var(--red)}
 .ev-resize{position:absolute;bottom:0;left:0;right:0;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
-.fab{position:fixed;bottom:22px;right:22px;background:var(--red);color:#fff;border:none;border-radius:50px;padding:9px 16px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;box-shadow:0 4px 16px rgba(224,112,112,0.3);z-index:100;transition:transform 0.1s}
-.fab:hover{transform:scale(1.04)}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:14px;padding:22px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
@@ -183,7 +181,6 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   </div>
 </div>
 
-<button class="fab" onclick="openModal(true)">+ Unforeseen</button>
 
 <div class="settings-panel" id="settings-panel">
   <div class="settings-header">
@@ -609,11 +606,11 @@ document.getElementById('pool-input').addEventListener('keydown',e=>{ if(e.key==
 const evCol=document.getElementById('events-col');
 
 // MODAL
-function openModal(isUnforeseen){
+function openModal(){
   const now=new Date(), h=String(now.getHours()).padStart(2,'0'), m=String(Math.round(now.getMinutes()/10)*10%60).padStart(2,'0'), eh=String(Math.min(now.getHours()+1,23)).padStart(2,'0');
   document.getElementById('m-name').value=''; document.getElementById('m-start').value=`${h}:${m}`; document.getElementById('m-end').value=`${eh}:${m}`;
-  document.getElementById('m-type').value=isUnforeseen?'unforeseen-ev':'task-ev';
-  document.getElementById('modal-title').textContent=isUnforeseen?'Unforeseen task':'Add task';
+  document.getElementById('m-type').value='task-ev';
+  document.getElementById('modal-title').textContent='Add task';
   document.getElementById('modal-bg').classList.add('open');
   modalCb=({name,start,end,type})=>{
     const evs=getEvents(selectedDate), sy=timeToY(start), ey=timeToY(end);
