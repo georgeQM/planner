@@ -30,10 +30,11 @@ poolTasks = [{ id, name }]
 - **unforeseen** (red) — urgent unplanned tasks, added via FAB button
 
 ## Key Constants
-- `HOUR = 120` — px height of one hour on the grid
-- `SNAP = 20` — px snap increment (~10 minutes)
-- `TIME_STEP = 20` — px resize increment
+- `HOUR = 240` — px height of one hour on the grid
+- `SNAP = 40` — px snap increment (10 minutes)
+- `TIME_STEP = SNAP` — px resize increment
 - `WP_HEADER_H = 28` — sticky day-header height in the week planner grid; all event tops are offset by this
+- `.wp-time-col` / `.wp-day-col` heights hardcoded at `HOUR * 24 = 5760px` — must be updated if HOUR changes
 
 ## Key Functions
 - `getEvents(d)` — gets events for a date; auto-creates routine instances from `weeklyPlan` (filters by `recurringDays`)
@@ -77,7 +78,8 @@ poolTasks = [{ id, name }]
 - All calendar event types stored with `-ev` suffix (`'routine-ev'`, `'task-ev'`, `'unforeseen-ev'`); weeklyPlan templates store without suffix
 - Instance edit: tap event title → `openEditModal(ev)` → edits only that `events[dateStr]` entry; uses 5px pointer threshold to distinguish tap from drag
 - Template edit: week planner ✎ → `openTemplateModal(null, editId)` → edits `weeklyPlan` only; shows "Changes apply to future days only" note
-- Pool drop y-offset uses `cal-scroll` scrollTop (not `events-col` which doesn't scroll)
+- Pool drop y-offset: `e.clientY - rect.top` only — `getBoundingClientRect()` already accounts for scroll, do not add scrollTop
+- Test banner: inline script at end of `<script>` block checks `window.location.hostname !== 'shimmering-sorbet-05c5d8.netlify.app'`; shows orange fixed banner at bottom on non-production hosts
 - Do not introduce frameworks, bundlers, or external dependencies
 - Do not split into multiple files yet (v2 decision)
 
