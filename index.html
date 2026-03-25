@@ -41,10 +41,10 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .wp-header .settings-title{flex:1}
 .wp-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
 .wp-grid{display:flex;min-width:max-content;position:relative}
-.wp-time-col{width:40px;flex-shrink:0;position:relative;height:5760px}
+.wp-time-col{width:40px;flex-shrink:0;position:relative;height:2880px}
 .wp-time-label{position:absolute;font-size:9px;color:var(--text3);right:6px;transform:translateY(-50%);font-family:'DM Mono',monospace}
 .wp-days{display:flex;flex:1}
-.wp-day-col{flex:1;min-width:80px;position:relative;border-left:1px solid var(--border);height:5760px}
+.wp-day-col{flex:1;min-width:80px;position:relative;border-left:1px solid var(--border);height:2880px}
 .wp-day-header{position:sticky;top:0;background:var(--surface);z-index:10;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border)}
 .wp-hour-line{position:absolute;left:0;right:0;border-top:1px solid var(--border);pointer-events:none}
 .wp-half-line{position:absolute;left:0;right:0;border-top:1px dashed var(--border);opacity:0.5;pointer-events:none}
@@ -68,6 +68,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .day-btn.active.today .dom{color:var(--bg)}
 .main{display:flex;flex:1;overflow:hidden}
 .pool{width:var(--pool);flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);overflow:hidden}
+.pool.pool-hidden{display:none}
 .pool-header{padding:12px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
 .pool-label{font-size:10px;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:8px}
 .quick-add{display:flex;gap:5px}
@@ -149,6 +150,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   <div class="logo">day<span>.</span>plan</div>
   <div class="topbar-right">
     <span id="sync-status"></span>
+    <button id="pool-btn" onclick="togglePool()" title="Toggle pool">▤</button>
     <button id="gear-btn" onclick="openSettings()">⚙</button>
     <button id="auth-btn" onclick="handleAuth()">Connect Drive</button>
   </div>
@@ -699,6 +701,19 @@ function handleAuth(){
   }).requestAccessToken();
 }
 
+function autoReconnect(){
+  if(typeof google==='undefined'||!google.accounts){ setTimeout(autoReconnect,800); return; }
+  google.accounts.oauth2.initTokenClient({
+    client_id:CLIENT_ID, scope:SCOPES, prompt:'',
+    callback:async(resp)=>{
+      if(resp.error) return;
+      accessToken=resp.access_token;
+      const btn=document.getElementById('auth-btn'); btn.textContent='Disconnect'; btn.classList.add('connected');
+      setStatus('Connecting…'); await initDrive();
+    }
+  }).requestAccessToken();
+}
+
 async function driveGet(url){ const r=await fetch(url,{headers:{'Authorization':'Bearer '+accessToken}}); if(!r.ok) throw new Error('Drive '+r.status); return r.json(); }
 
 async function getOrCreateFolder(){
@@ -792,8 +807,16 @@ if(saved){
   poolTasks = ['Review tutorials','Call Emily','Talk to immigration agent','Work on personal project','Check emails']
     .map(name=>({id:uid(),name}));
 }
+if(localStorage.getItem('poolHidden')) document.querySelector('.pool').classList.add('pool-hidden');
 renderAll(); scrollToNow();
 setInterval(()=>{ renderGrid(); renderEvents(); },60000);
+autoReconnect();
+
+function togglePool(){
+  const p=document.querySelector('.pool');
+  p.classList.toggle('pool-hidden');
+  localStorage.setItem('poolHidden', p.classList.contains('pool-hidden')?'1':'');
+}
 
 function openSettings(){
   document.getElementById('settings-panel').classList.add('open');
@@ -813,6 +836,7 @@ window.addEventListener('popstate',()=>{
 
 const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const WP_HEADER_H=28;
+const WP_HOUR = HOUR / 2;
 
 function openWeekPlanner(){
   document.getElementById('week-planner-panel').classList.add('open');
@@ -830,7 +854,7 @@ function renderWeekPlan(){
   for(let h=1;h<24;h++){
     const lbl=document.createElement('div');
     lbl.className='wp-time-label';
-    lbl.style.top=(h*HOUR+WP_HEADER_H)+'px';
+    lbl.style.top=(h*WP_HOUR+WP_HEADER_H)+'px';
     lbl.textContent=`${h%12||12}${h<12?'am':'pm'}`;
     timeCol.appendChild(lbl);
   }
@@ -847,18 +871,18 @@ function renderWeekPlan(){
     for(let h=0;h<24;h++){
       const hl=document.createElement('div');
       hl.className='wp-hour-line';
-      hl.style.top=(h*HOUR+WP_HEADER_H)+'px';
+      hl.style.top=(h*WP_HOUR+WP_HEADER_H)+'px';
       col.appendChild(hl);
       const hf=document.createElement('div');
       hf.className='wp-half-line';
-      hf.style.top=(h*HOUR+HOUR/2+WP_HEADER_H)+'px';
+      hf.style.top=(h*WP_HOUR+WP_HOUR/2+WP_HEADER_H)+'px';
       col.appendChild(hf);
     }
     (weeklyPlan[d]||[]).forEach(t=>{
       const el=document.createElement('div');
       el.className='wp-event';
-      el.style.top=(timeToY(t.start)+WP_HEADER_H)+'px';
-      el.style.height=Math.max(timeToY(t.end)-timeToY(t.start),SNAP)+'px';
+      el.style.top=(Math.round(timeToY(t.start)/2)+WP_HEADER_H)+'px';
+      el.style.height=Math.max(Math.round((timeToY(t.end)-timeToY(t.start))/2),SNAP/2)+'px';
       el.innerHTML=`<div class="wp-event-title">${t.name}</div><div class="wp-event-time">${fmtTime(t.start)}–${fmtTime(t.end)}</div><div class="wp-event-edit" data-id="${t.id}">✎</div><div class="wp-event-del" data-id="${t.id}">✕</div>`;
       el.querySelector('.wp-event-del').addEventListener('pointerup',e=>{
         e.stopPropagation();
