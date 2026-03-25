@@ -27,21 +27,24 @@ poolTasks = [{ id, name }]
 ## Event Types
 - **routine** (orange) — recurring templates from `weeklyPlan`, auto-instantiated per day
 - **task** (blue) — manually scheduled events
-- **unforeseen** (red) — urgent unplanned tasks, added via FAB button
+- **unforeseen** (red) — urgent unplanned tasks, added via type dropdown in the Add task modal
 
 ## Key Constants
-- `HOUR = 240` — px height of one hour on the grid
+- `HOUR = 240` — px height of one hour on the main calendar grid
 - `SNAP = 40` — px snap increment (10 minutes)
 - `TIME_STEP = SNAP` — px resize increment
 - `WP_HEADER_H = 28` — sticky day-header height in the week planner grid; all event tops are offset by this
-- `.wp-time-col` / `.wp-day-col` heights hardcoded at `HOUR * 24 = 5760px` — must be updated if HOUR changes
+- `WP_HOUR = HOUR / 2 = 120` — px height of one hour in the week planner grid (half scale of main calendar)
+- `.wp-time-col` / `.wp-day-col` heights hardcoded at `WP_HOUR * 24 = 2880px`
 
 ## Key Functions
 - `getEvents(d)` — gets events for a date; auto-creates routine instances from `weeklyPlan` (filters by `recurringDays`)
 - `renderGrid()` / `renderEvents()` / `renderPool()` — main render functions
 - `renderWeekPlan()` — renders the 7-column weekly template editor grid
 - `onDragMove()` / `onResizeDown()` / `onPoolDown()` — drag-and-drop handlers
-- `openModal(isUnforeseen)` — event creation dialog for calendar day
+- `openModal()` — event creation dialog for calendar day (always opens as 'Add task'; unforeseen selectable via type dropdown)
+- `togglePool()` — hides/shows the pool sidebar; state persisted in `localStorage.poolHidden`
+- `autoReconnect()` — attempts silent OAuth reconnect to Drive on load using `prompt:''`
 - `openTemplateModal(preDay)` — reuses modal in template mode (day selector, no type selector)
 - `confirmModal()` / `closeModal()` — modal confirm and close (closeModal resets template-mode fields)
 - `openSettings()` / `closeSettings()` — settings overlay navigation
@@ -54,6 +57,7 @@ poolTasks = [{ id, name }]
 - Scope: `https://www.googleapis.com/auth/drive.file`
 - Stores data in a "Planner" folder as `planner-data.json`
 - For `file://` protocol: use `null` as Authorized JavaScript Origin in Google Cloud Console
+- `autoReconnect()` fires on load — uses `prompt:''` for silent token acquisition; silently no-ops if not previously authorized
 
 ## Development Notes
 - No build step — open `index.html` directly in a browser
@@ -67,6 +71,7 @@ poolTasks = [{ id, name }]
 - **Week planner panel** (`#week-planner-panel`, z-index 400) — opened from Settings → "Plan Your Week"
 - Both panels use `history.pushState` for mobile back-gesture support
 - `popstate` handler: closes week planner first (re-pushes settings state), then settings on second back
+- **Pool sidebar** — toggled by `▤` button (`#pool-btn`) in topbar; hides via `.pool.pool-hidden{display:none}`; state persisted in `localStorage.poolHidden`
 
 ## Current State
 - v1 in progress, branch: ai-dev
@@ -80,6 +85,8 @@ poolTasks = [{ id, name }]
 - Template edit: week planner ✎ → `openTemplateModal(null, editId)` → edits `weeklyPlan` only; shows "Changes apply to future days only" note
 - Pool drop y-offset: `e.clientY - rect.top` only — `getBoundingClientRect()` already accounts for scroll, do not add scrollTop
 - Test banner: inline script at end of `<script>` block checks `window.location.hostname !== 'shimmering-sorbet-05c5d8.netlify.app'`; shows orange fixed banner at bottom on non-production hosts
+- FAB button for unforeseen tasks removed — unforeseen type is still available via the type dropdown in `openModal()`
+- Week planner grid uses `WP_HOUR=120` (half of main `HOUR=240`); event positioning uses `Math.round(timeToY()/2)` — do not use `HOUR` inside `renderWeekPlan()`
 - Do not introduce frameworks, bundlers, or external dependencies
 - Do not split into multiple files yet (v2 decision)
 
