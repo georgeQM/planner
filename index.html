@@ -116,7 +116,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-del:hover{color:var(--red)}
 .ev-resize{position:absolute;bottom:0;left:0;right:0;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
-.ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2;background:rgba(245,242,238,0.85);border-radius:4px}
+.ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2;background:rgba(245,242,238,0.85);border-radius:4px;touch-action:none}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:14px;padding:22px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
@@ -405,7 +405,7 @@ function onMoveDown(e){
   e.preventDefault();
   const el=e.currentTarget.closest('.cal-event'), ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); 
   if(!ev) return;
-  dragState={type:'move',id:ev.id,startY:e.clientY,origTop:timeToY(ev.start),dur:timeToY(ev.end)-timeToY(ev.start)};
+  dragState={type:'move',id:ev.id,startY:e.clientY,origTop:timeToY(ev.start),dur:timeToY(ev.end)-timeToY(ev.start),pointerId:e.pointerId,captured:false};
   document.addEventListener("pointermove", onDragMove); document.addEventListener("pointerup", onDragUp);
 
   dragging = el;
@@ -414,8 +414,8 @@ function onMoveDown(e){
   offsetX = e.clientX - rect.left;
   offsetY = e.clientY - rect.top;
 
-  dragging.setPointerCapture(e.pointerId);
 }
+
 
 function onResizeDown(e){
   e.preventDefault();
@@ -448,6 +448,10 @@ function onDragMove(e){
   if(dragState.type==='move'){
     let t=Math.max(0,Math.min(dragState.origTop+dy,HOUR*24-dragState.dur));
     const s=Math.round(t/SNAP)*SNAP; ev.start=yToTime(s); ev.end=yToTime(s+dragState.dur);
+    if(!dragState.captured && dragging){
+      try{ dragging.setPointerCapture(dragState.pointerId); }catch{}
+      dragState.captured=true;
+    }
   } else {//resize
     const sy = timeToY(ev.start);
     let ne = dragState.origEnd + dy;
