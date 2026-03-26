@@ -18,10 +18,13 @@ weeklyPlan = {
 }
 
 events = {
-  "YYYY-MM-DD": [{ id, name, start, end, type, done, fromTemplate, templateId }]
+  "YYYY-MM-DD": [{ id, name, start, end, type, done, fromTemplate, templateId, returnedToPool? }]
 }
 
 poolTasks = [{ id, name }]
+
+completedTasks = [{ id, name, completedAt, duration, date }]
+// completedAt: ISO string; duration: minutes; date: "YYYY-MM-DD"
 ```
 
 ## Event Types
@@ -47,9 +50,11 @@ poolTasks = [{ id, name }]
 - `togglePool()` — hides/shows the pool sidebar; state persisted in `localStorage.poolHidden`
 - `autoReconnect()` — attempts silent OAuth reconnect to Drive on load using `prompt:''`; on success sets `#drive-status` to green "● Connected"
 - `openTemplateModal(preDay)` — reuses modal in template mode (day selector, no type selector)
-- `confirmModal()` / `closeModal()` — modal confirm and close (closeModal resets template-mode fields)
+- `confirmModal()` / `closeModal()` — modal confirm and close (closeModal resets template-mode fields, `m-type.onchange`, and `recur-all` checkbox)
 - `openSettings()` / `closeSettings()` — settings overlay navigation
 - `openWeekPlanner()` / `closeWeekPlanner()` — week planner overlay navigation
+- `openHistory()` / `closeHistory()` / `renderHistory()` — history panel navigation and rendering
+- `returnUncompletedToPool()` — moves past-day uncompleted `task-ev` (non-template) events to pool; guards with `ev.returnedToPool` flag; called on load and at midnight
 - `saveFile()` / `loadFile()` / `handleAuth()` — Google Drive integration
 - `scheduleSave()` — debounced save to localStorage always; Drive only when accessToken exists
 
@@ -71,10 +76,11 @@ poolTasks = [{ id, name }]
 
 
 ## UI Panels
-- **Settings panel** (`#settings-panel`, z-index 300) — gear icon (⚙) in topbar opens it; contains "📅 Plan Your Week" and "🔗 Connect Drive" rows
+- **Settings panel** (`#settings-panel`, z-index 300) — gear icon (⚙) in topbar opens it; contains "📅 Plan Your Week", "📋 History", and "🔗 Connect Drive" rows
 - **Week planner panel** (`#week-planner-panel`, z-index 400) — opened from Settings → "📅 Plan Your Week"
-- Both panels use `history.pushState` for mobile back-gesture support
-- `popstate` handler: closes week planner first (re-pushes settings state), then settings on second back
+- **History panel** (`#history-panel`, z-index 300) — opened from Settings → "📋 History"; shows completed tasks newest-first with date, time, and duration
+- All panels use `history.pushState` for mobile back-gesture support
+- `popstate` handler order: history → week planner (re-pushes settings state) → settings
 - **Pool sidebar** — toggled by `▤` button (`#pool-btn`) in the **week-strip** (not topbar); hides via `.pool.pool-hidden{display:none}`; state persisted in `localStorage.poolHidden`
 
 ## Topbar
@@ -110,7 +116,7 @@ HTML child order inside each `.cal-event`:
 - v1 in progress, branch: ai-dev
 - `weeklyPlan` is the single source of truth for routine templates (replaces old `routineTemplates`)
 - Week planner editor: add/edit/delete templates per day-of-week, persisted via `scheduleSave()`
-- Template modal: name, start, end, type (routine/task), recurring day checkboxes (Sun–Sat); defaults all days checked
+- Template modal: name, start, end, type (routine/task), recurring day checkboxes (Sun–Sat) with "All" toggle; selecting `task-ev` type hides recur-days and unchecks all; defaults all days checked for routine/unforeseen
 - `getEvents(d)`: auto-fills new days from `weeklyPlan` templates; guard is `events[k] === undefined` (explicit, not truthiness-based); never calls renderAll()
 - Deleted calendar instances stay deleted — deletion uses `filter` (keeps key as `[]`), never `delete events[k]`
 - All calendar event types stored with `-ev` suffix (`'routine-ev'`, `'task-ev'`, `'unforeseen-ev'`); weeklyPlan templates store without suffix
@@ -118,6 +124,8 @@ HTML child order inside each `.cal-event`:
 - Test banner: inline script at end of `<script>` block checks `window.location.hostname !== 'shimmering-sorbet-05c5d8.netlify.app'`; shows orange fixed banner at bottom on non-production hosts
 - FAB button for unforeseen tasks removed — unforeseen type is still available via the type dropdown in `openModal()`
 - Week planner grid uses `WP_HOUR=120` (half of main `HOUR=240`); event positioning uses `Math.round(timeToY()/2)` — do not use `HOUR` inside `renderWeekPlan()`
+- **History**: `completedTasks` array persisted in localStorage + Drive; populated when ev-check toggled done, pruned on undone; rendered in `#history-panel` newest-first
+- **Midnight rollover**: `returnUncompletedToPool()` runs on load and at midnight via `setTimeout`; moves past-day uncompleted `task-ev` (non-template, not already returned) to pool; uses `ev.returnedToPool = true` guard; deduplicates by name
 - Do not introduce frameworks, bundlers, or external dependencies
 - Do not split into multiple files yet (v2 decision)
 
