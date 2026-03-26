@@ -23,6 +23,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 #sync-status{font-size:11px;color:var(--text3);white-space:nowrap;min-width:90px;text-align:right}
 #gear-btn{font-family:'DM Mono',monospace;font-size:15px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text2);cursor:pointer;line-height:1;transition:all 0.15s}
 #gear-btn:hover{border-color:var(--accent);color:var(--accent)}
+#drive-status{font-size:11px;white-space:nowrap}
 .settings-panel{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;flex-direction:column}
 .settings-panel.open{display:flex}
 .settings-header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
@@ -149,6 +150,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 <div class="topbar">
   <div class="logo">day<span>.</span>plan</div>
   <div class="topbar-right">
+    <span id="drive-status" title="Go to Settings to connect Drive"></span>
     <span id="sync-status"></span>
 
     <button id="gear-btn" onclick="openSettings()">⚙</button>
@@ -695,7 +697,10 @@ function setStatus(msg,color){ const el=document.getElementById('sync-status'); 
 function handleAuth(){
   if(accessToken){
     accessToken=null; driveFileId=null; folderId=null;
-    const btn=document.getElementById('settings-auth-btn'); btn.textContent='🔗 Connect Drive'; btn.classList.remove('connected'); setStatus(''); return;
+    const btn=document.getElementById('settings-auth-btn'); btn.textContent='🔗 Connect Drive'; btn.classList.remove('connected'); setStatus('');
+    document.getElementById('drive-status').textContent='● Disconnected';
+    document.getElementById('drive-status').style.color='var(--red)';
+    return;
   }
   if(typeof google==='undefined'||!google.accounts){ setStatus('Loading…'); setTimeout(handleAuth,800); return; }
   google.accounts.oauth2.initTokenClient({
@@ -704,6 +709,8 @@ function handleAuth(){
       if(resp.error){ setStatus('Auth failed','var(--red)'); return; }
       accessToken=resp.access_token;
       const btn=document.getElementById('settings-auth-btn'); btn.textContent='⛓️‍💥 Disconnect Drive'; btn.classList.add('connected');
+      document.getElementById('drive-status').textContent='● Connected';
+      document.getElementById('drive-status').style.color='var(--green)';
       setStatus('Connecting…'); await initDrive();
     }
   }).requestAccessToken();
@@ -717,6 +724,8 @@ function autoReconnect(){
       if(resp.error) return;
       accessToken=resp.access_token;
       const btn=document.getElementById('settings-auth-btn'); btn.textContent='⛓️‍💥 Disconnect Drive'; btn.classList.add('connected');
+      document.getElementById('drive-status').textContent='● Connected';
+      document.getElementById('drive-status').style.color='var(--green)';
       setStatus('Connecting…'); await initDrive();
     }
   }).requestAccessToken();
@@ -819,6 +828,8 @@ if(localStorage.getItem('poolHidden')) document.querySelector('.pool').classList
 renderAll(); scrollToNow();
 setInterval(()=>{ renderGrid(); renderEvents(); },60000);
 autoReconnect();
+document.getElementById('drive-status').textContent='● Disconnected';
+document.getElementById('drive-status').style.color='var(--red)';
 
 function togglePool(){
   const p=document.querySelector('.pool');
