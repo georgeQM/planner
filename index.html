@@ -58,6 +58,8 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .banner{font-size:11px;color:var(--text2);background:#fffbe6;border-bottom:1px solid #f0e08a;padding:6px 18px;flex-shrink:0;display:none;line-height:1.5}
 .banner.show{display:block}
 .week-strip{display:flex;gap:4px;background:var(--surface);padding:0 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+#pool-btn{flex-shrink:0;background:none;border:none;border-right:1px solid var(--border);padding:7px 12px;font-size:16px;cursor:pointer;color:var(--text2);align-self:stretch;transition:color 0.15s}
+#pool-btn:hover{color:var(--accent)}
 .day-btn{flex:1;padding:7px 4px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;text-align:center;transition:all 0.15s;min-width:0}
 .day-btn:hover{background:var(--surface2)}
 .day-btn.active{background:var(--text);border-color:var(--text)}
@@ -94,9 +96,9 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .events-col.drag-over{background:var(--accent-light)}
 .now-line{position:absolute;left:0;right:0;height:2px;background:var(--accent);z-index:10;pointer-events:all}
 .now-dot{position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
-.cal-event{position:absolute;left:4px;right:4px;border-radius:8px;padding:5px 26px 12px 8px;font-size:12px;cursor:grab;user-select:none;overflow:hidden;z-index:5;transition:box-shadow 0.1s}
+.cal-event{position:absolute;left:4px;right:4px;border-radius:8px;padding:5px 26px 12px 28px;font-size:12px;cursor:default;touch-action:pan-y;user-select:none;overflow:hidden;z-index:5;transition:box-shadow 0.1s}
 .cal-event:hover{box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:6}
-.cal-event:active{cursor:grabbing}
+.cal-event:active{cursor:default}
 .cal-event.routine-ev{background:#fff8f2;border:1.5px solid var(--accent)}
 .cal-event.task-ev{background:#f0f4ff;border:1.5px solid var(--blue)}
 .cal-event.unforeseen-ev{background:#fff0f0;border:1.5px solid var(--red)}
@@ -108,11 +110,13 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-check{position:absolute;top:5px;left:5px;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px;background:white;flex-shrink:0}
 .ev-check:hover{border-color:var(--green)}
 .ev-check.checked{background:var(--green);border-color:var(--green);color:white}
+.ev-edit{position:absolute;top:24px;left:4px;width:18px;height:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2);font-weight:700}
+.ev-edit:hover{color:var(--accent)}
 .ev-del{width:14px;height:14px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);flex-shrink:0;line-height:1}
 .ev-del:hover{color:var(--red)}
 .ev-resize{position:absolute;bottom:0;left:0;right:0;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
-.ev-handle{position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text3);pointer-events:none;opacity:0.5}
+.ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:14px;padding:22px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
@@ -148,7 +152,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   <div class="logo">day<span>.</span>plan</div>
   <div class="topbar-right">
     <span id="sync-status"></span>
-    <button id="pool-btn" onclick="togglePool()" title="Toggle pool">▤</button>
+
     <button id="gear-btn" onclick="openSettings()">⚙</button>
     <button id="auth-btn" onclick="handleAuth()">Connect Drive</button>
   </div>
@@ -158,7 +162,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   ⚠ Running as a local file. For Google Drive sync to work, you need to add <strong>null</strong> as an Authorized JavaScript origin in your <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent)">Google Cloud Console → OAuth credentials</a>. Or host the file on any web server.
 </div>
 
-<div class="week-strip" id="week-strip"></div>
+<div class="week-strip" id="week-strip"><button id="pool-btn" onclick="togglePool()" title="Toggle pool" style="flex-shrink:0;padding:7px 10px;border:none;border-right:1px solid var(--border);background:none;font-size:16px;cursor:pointer;color:var(--text2);margin-right:6px;align-self:stretch">▤</button></div>
 
 <div class="main">
   <div class="pool">
@@ -305,7 +309,7 @@ function getEvents(d) {
 
 // WEEK STRIP
 function renderWeekStrip(){
-  const strip=document.getElementById('week-strip'); strip.innerHTML='';
+  const strip=document.getElementById('week-strip'); strip.querySelectorAll('.day-btn').forEach(e=>e.remove());
   for(let i=0;i<7;i++){
     const d=new Date(today); d.setDate(today.getDate()+i);
     const btn=document.createElement('button');
@@ -353,7 +357,7 @@ function renderEvents(){
     el.style.top = timeToY(ev.start) + 'px';
     el.style.height = Math.max(timeToY(ev.end)-timeToY(ev.start), SNAP) + 'px'; 
     el.dataset.id=ev.id;
-    el.innerHTML=`<div class="ev-check${ev.done?' checked':''}" data-id="${ev.id}">${ev.done?'✓':''}</div><div class="ev-handle">⠿</div><div class="ev-title">${ev.name}</div><div class="ev-time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div><div class="ev-actions"><div class="ev-del" data-id="${ev.id}">✕</div></div><div class="ev-resize" data-id="${ev.id}"></div>`;
+    el.innerHTML=`<div class="ev-check${ev.done?' checked':''}" data-id="${ev.id}">${ev.done?'✓':''}</div><div class="ev-edit" data-id="${ev.id}">✏</div><div class="ev-handle">⠿</div><div class="ev-title">${ev.name}</div><div class="ev-time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div><div class="ev-actions"><div class="ev-del" data-id="${ev.id}">✕</div></div><div class="ev-resize" data-id="${ev.id}"></div>`;
     el.querySelector('.ev-check').addEventListener('click',e=>{ e.stopPropagation(); const x=getEvents(selectedDate).find(x=>x.id===ev.id); if(x){x.done=!x.done; renderEvents(); scheduleSave();} });
     el.querySelector('.ev-del').addEventListener('click',e=>{
       e.stopPropagation();
@@ -382,10 +386,10 @@ function renderEvents(){
       tapDownX = e.clientX; tapDownY = e.clientY; tapDidMove = false;
       onMoveDown(e);
     });
-    el.addEventListener('pointerup', e => {
-      if (!tapDidMove && !['ev-check','ev-del','ev-resize'].some(c => e.target.classList.contains(c))) {
-        openEditModal(ev);
-      }
+    el.querySelector('.ev-edit').addEventListener('click', e => {
+      e.stopPropagation();
+      const x = getEvents(selectedDate).find(x => x.id === ev.id);
+      if (x) openEditModal(x);
     });
     col.appendChild(el);
   });
@@ -393,7 +397,7 @@ function renderEvents(){
 
 // DRAG MOVE
 function onMoveDown(e){
-  if(['ev-resize','ev-check','ev-del'].some(c=>e.target.classList.contains(c))) return;
+  if(!e.target.classList.contains('ev-handle')) return;
   e.preventDefault();
   const el=e.currentTarget, ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); 
   if(!ev) return;
@@ -802,7 +806,7 @@ if(saved){
     console.error('Local load failed', e);
   }
 }else{
-  poolTasks = ['Review tutorials','Call Emily','Talk to immigration agent','Work on personal project','Check emails']
+  poolTasks = []
     .map(name=>({id:uid(),name}));
 }
 if(localStorage.getItem('poolHidden')) document.querySelector('.pool').classList.add('pool-hidden');
