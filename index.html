@@ -116,7 +116,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-del:hover{color:var(--red)}
 .ev-resize{position:absolute;bottom:0;left:0;right:0;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
-.ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2}
+.ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2;background:rgba(245,242,238,0.85);border-radius:4px}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:14px;padding:22px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
@@ -132,7 +132,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .draggable {touch-action: none; user-select: none;}
-.cal-event, .ev-resize {
+.ev-resize {
   touch-action: none;
 }
 .pool-task {
@@ -358,6 +358,10 @@ function renderEvents(){
     el.style.height = Math.max(timeToY(ev.end)-timeToY(ev.start), SNAP) + 'px'; 
     el.dataset.id=ev.id;
     el.innerHTML=`<div class="ev-check${ev.done?' checked':''}" data-id="${ev.id}">${ev.done?'✓':''}</div><div class="ev-edit" data-id="${ev.id}">✏</div><div class="ev-handle">⠿</div><div class="ev-title">${ev.name}</div><div class="ev-time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div><div class="ev-actions"><div class="ev-del" data-id="${ev.id}">✕</div></div><div class="ev-resize" data-id="${ev.id}"></div>`;
+    const evHeightPx = Math.round((timeToY(ev.end) - timeToY(ev.start)) / 2);
+    if (evHeightPx >= 60) {
+      el.querySelector('.ev-title').style.marginTop = '18px';
+    }
     el.querySelector('.ev-check').addEventListener('click',e=>{ e.stopPropagation(); const x=getEvents(selectedDate).find(x=>x.id===ev.id); if(x){x.done=!x.done; renderEvents(); scheduleSave();} });
     el.querySelector('.ev-del').addEventListener('click',e=>{
       e.stopPropagation();
@@ -382,7 +386,7 @@ function renderEvents(){
       scheduleSave();
     });
     el.querySelector('.ev-resize').addEventListener('pointerdown', onResizeDown);
-    el.addEventListener('pointerdown', e => {
+    el.querySelector('.ev-handle').addEventListener('pointerdown', e => {
       tapDownX = e.clientX; tapDownY = e.clientY; tapDidMove = false;
       onMoveDown(e);
     });
@@ -399,12 +403,12 @@ function renderEvents(){
 function onMoveDown(e){
   if(!e.target.classList.contains('ev-handle')) return;
   e.preventDefault();
-  const el=e.currentTarget, ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); 
+  const el=e.currentTarget.closest('.cal-event'), ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); 
   if(!ev) return;
   dragState={type:'move',id:ev.id,startY:e.clientY,origTop:timeToY(ev.start),dur:timeToY(ev.end)-timeToY(ev.start)};
   document.addEventListener("pointermove", onDragMove); document.addEventListener("pointerup", onDragUp);
 
-  dragging = e.currentTarget;
+  dragging = el;
 
   const rect = dragging.getBoundingClientRect();
   offsetX = e.clientX - rect.left;
