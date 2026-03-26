@@ -21,11 +21,9 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .logo span{color:var(--accent)}
 .topbar-right{display:flex;align-items:center;gap:10px}
 #sync-status{font-size:11px;color:var(--text3);white-space:nowrap;min-width:90px;text-align:right}
-#auth-btn{font-family:'DM Mono',monospace;font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text2);cursor:pointer;white-space:nowrap;transition:all 0.15s}
-#auth-btn:hover{border-color:var(--accent);color:var(--accent)}
-#auth-btn.connected{border-color:var(--green);color:var(--green)}
 #gear-btn{font-family:'DM Mono',monospace;font-size:15px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text2);cursor:pointer;line-height:1;transition:all 0.15s}
 #gear-btn:hover{border-color:var(--accent);color:var(--accent)}
+#drive-status{font-size:11px;white-space:nowrap}
 .settings-panel{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;flex-direction:column}
 .settings-panel.open{display:flex}
 .settings-header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface)}
@@ -35,6 +33,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .settings-body{padding:16px;display:flex;flex-direction:column;gap:8px}
 .settings-row{display:flex;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);cursor:pointer;transition:all 0.15s}
 .settings-row:hover{border-color:var(--accent);color:var(--accent)}
+#settings-auth-btn.connected{border-color:var(--green);color:var(--green)}
 .week-planner-panel{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;flex-direction:column}
 .week-planner-panel.open{display:flex}
 .wp-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
@@ -58,6 +57,8 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .banner{font-size:11px;color:var(--text2);background:#fffbe6;border-bottom:1px solid #f0e08a;padding:6px 18px;flex-shrink:0;display:none;line-height:1.5}
 .banner.show{display:block}
 .week-strip{display:flex;gap:4px;background:var(--surface);padding:0 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+#pool-btn{flex-shrink:0;background:none;border:none;border-right:1px solid var(--border);padding:7px 12px;font-size:16px;cursor:pointer;color:var(--text2);align-self:stretch;transition:color 0.15s}
+#pool-btn:hover{color:var(--accent)}
 .day-btn{flex:1;padding:7px 4px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;text-align:center;transition:all 0.15s;min-width:0}
 .day-btn:hover{background:var(--surface2)}
 .day-btn.active{background:var(--text);border-color:var(--text)}
@@ -94,9 +95,9 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .events-col.drag-over{background:var(--accent-light)}
 .now-line{position:absolute;left:0;right:0;height:2px;background:var(--accent);z-index:10;pointer-events:all}
 .now-dot{position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
-.cal-event{position:absolute;left:4px;right:4px;border-radius:8px;padding:5px 26px 12px 8px;font-size:12px;cursor:grab;user-select:none;overflow:hidden;z-index:5;transition:box-shadow 0.1s}
+.cal-event{position:absolute;left:4px;right:4px;border-radius:8px;padding:5px 26px 12px 28px;font-size:12px;cursor:default;touch-action:pan-y;user-select:none;overflow:hidden;z-index:5;transition:box-shadow 0.1s}
 .cal-event:hover{box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:6}
-.cal-event:active{cursor:grabbing}
+.cal-event:active{cursor:default}
 .cal-event.routine-ev{background:#fff8f2;border:1.5px solid var(--accent)}
 .cal-event.task-ev{background:#f0f4ff;border:1.5px solid var(--blue)}
 .cal-event.unforeseen-ev{background:#fff0f0;border:1.5px solid var(--red)}
@@ -105,13 +106,16 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-time{font-size:10px;color:var(--text2);margin-top:1px}
 .done-ev .ev-title{text-decoration:line-through}
 .ev-actions{position:absolute;top:5px;right:5px;display:flex;gap:3px;align-items:center}
-.ev-check{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px;background:white;flex-shrink:0}
+.ev-check{position:absolute;top:5px;left:5px;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px;background:white;flex-shrink:0}
 .ev-check:hover{border-color:var(--green)}
 .ev-check.checked{background:var(--green);border-color:var(--green);color:white}
+.ev-edit{position:absolute;top:24px;left:4px;width:18px;height:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2);font-weight:700}
+.ev-edit:hover{color:var(--accent)}
 .ev-del{width:14px;height:14px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);flex-shrink:0;line-height:1}
 .ev-del:hover{color:var(--red)}
 .ev-resize{position:absolute;bottom:0;left:0;right:0;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
+.ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2;background:rgba(245,242,238,0.97);border-radius:4px;touch-action:none}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:14px;padding:22px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
@@ -127,13 +131,10 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .draggable {touch-action: none; user-select: none;}
-.cal-event, .ev-resize {
+.ev-resize {
   touch-action: none;
 }
 .pool-task {
-  touch-action: none;
-}
-#events-col, .pool-task {
   touch-action: none;
 }
 .field-label{font-size:10px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;display:block}
@@ -149,10 +150,10 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 <div class="topbar">
   <div class="logo">day<span>.</span>plan</div>
   <div class="topbar-right">
+    <span id="drive-status" title="Go to Settings to connect Drive"></span>
     <span id="sync-status"></span>
-    <button id="pool-btn" onclick="togglePool()" title="Toggle pool">▤</button>
+
     <button id="gear-btn" onclick="openSettings()">⚙</button>
-    <button id="auth-btn" onclick="handleAuth()">Connect Drive</button>
   </div>
 </div>
 
@@ -160,7 +161,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   ⚠ Running as a local file. For Google Drive sync to work, you need to add <strong>null</strong> as an Authorized JavaScript origin in your <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent)">Google Cloud Console → OAuth credentials</a>. Or host the file on any web server.
 </div>
 
-<div class="week-strip" id="week-strip"></div>
+<div class="week-strip" id="week-strip"><button id="pool-btn" onclick="togglePool()" title="Toggle pool" style="flex-shrink:0;padding:7px 10px;border:none;border-right:1px solid var(--border);background:none;font-size:16px;cursor:pointer;color:var(--text2);margin-right:6px;align-self:stretch">▤</button></div>
 
 <div class="main">
   <div class="pool">
@@ -190,7 +191,8 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
     <span class="settings-title">Settings</span>
   </div>
   <div class="settings-body">
-    <button class="settings-row" onclick="openWeekPlanner()">Plan Your Week</button>
+    <button class="settings-row" onclick="openWeekPlanner()">📅 Plan Your Week</button>
+  <button class="settings-row" id="settings-auth-btn" onclick="handleAuth()">🔗 Connect Drive</button>
   </div>
 </div>
 
@@ -307,7 +309,7 @@ function getEvents(d) {
 
 // WEEK STRIP
 function renderWeekStrip(){
-  const strip=document.getElementById('week-strip'); strip.innerHTML='';
+  const strip=document.getElementById('week-strip'); strip.querySelectorAll('.day-btn').forEach(e=>e.remove());
   for(let i=0;i<7;i++){
     const d=new Date(today); d.setDate(today.getDate()+i);
     const btn=document.createElement('button');
@@ -355,7 +357,11 @@ function renderEvents(){
     el.style.top = timeToY(ev.start) + 'px';
     el.style.height = Math.max(timeToY(ev.end)-timeToY(ev.start), SNAP) + 'px'; 
     el.dataset.id=ev.id;
-    el.innerHTML=`<div class="ev-title">${ev.name}</div><div class="ev-time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div><div class="ev-actions"><div class="ev-check${ev.done?' checked':''}" data-id="${ev.id}">${ev.done?'✓':''}</div><div class="ev-del" data-id="${ev.id}">✕</div></div><div class="ev-resize" data-id="${ev.id}"></div>`;
+    el.innerHTML=`<div class="ev-check${ev.done?' checked':''}" data-id="${ev.id}">${ev.done?'✓':''}</div><div class="ev-edit" data-id="${ev.id}">✏</div><div class="ev-handle">⠿</div><div class="ev-title">${ev.name}</div><div class="ev-time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div><div class="ev-actions"><div class="ev-del" data-id="${ev.id}">✕</div></div><div class="ev-resize" data-id="${ev.id}"></div>`;
+    const evHeightPx = Math.round((timeToY(ev.end) - timeToY(ev.start)) / 2);
+    if (evHeightPx >= 60) {
+      el.querySelector('.ev-title').style.marginTop = '18px';
+    }
     el.querySelector('.ev-check').addEventListener('click',e=>{ e.stopPropagation(); const x=getEvents(selectedDate).find(x=>x.id===ev.id); if(x){x.done=!x.done; renderEvents(); scheduleSave();} });
     el.querySelector('.ev-del').addEventListener('click',e=>{
       e.stopPropagation();
@@ -380,14 +386,14 @@ function renderEvents(){
       scheduleSave();
     });
     el.querySelector('.ev-resize').addEventListener('pointerdown', onResizeDown);
-    el.addEventListener('pointerdown', e => {
+    el.querySelector('.ev-handle').addEventListener('pointerdown', e => {
       tapDownX = e.clientX; tapDownY = e.clientY; tapDidMove = false;
       onMoveDown(e);
     });
-    el.addEventListener('pointerup', e => {
-      if (!tapDidMove && !['ev-check','ev-del','ev-resize'].some(c => e.target.classList.contains(c))) {
-        openEditModal(ev);
-      }
+    el.querySelector('.ev-edit').addEventListener('click', e => {
+      e.stopPropagation();
+      const x = getEvents(selectedDate).find(x => x.id === ev.id);
+      if (x) openEditModal(x);
     });
     col.appendChild(el);
   });
@@ -395,21 +401,21 @@ function renderEvents(){
 
 // DRAG MOVE
 function onMoveDown(e){
-  if(['ev-resize','ev-check','ev-del'].some(c=>e.target.classList.contains(c))) return;
+  if(!e.target.classList.contains('ev-handle')) return;
   e.preventDefault();
-  const el=e.currentTarget, ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); 
+  const el=e.currentTarget.closest('.cal-event'), ev=getEvents(selectedDate).find(x=>x.id===el.dataset.id); 
   if(!ev) return;
-  dragState={type:'move',id:ev.id,startY:e.clientY,origTop:timeToY(ev.start),dur:timeToY(ev.end)-timeToY(ev.start)};
+  dragState={type:'move',id:ev.id,startY:e.clientY,origTop:timeToY(ev.start),dur:timeToY(ev.end)-timeToY(ev.start),pointerId:e.pointerId,captured:false};
   document.addEventListener("pointermove", onDragMove); document.addEventListener("pointerup", onDragUp);
 
-  dragging = e.currentTarget;
+  dragging = el;
 
   const rect = dragging.getBoundingClientRect();
   offsetX = e.clientX - rect.left;
   offsetY = e.clientY - rect.top;
 
-  dragging.setPointerCapture(e.pointerId);
 }
+
 
 function onResizeDown(e){
   e.preventDefault();
@@ -442,6 +448,10 @@ function onDragMove(e){
   if(dragState.type==='move'){
     let t=Math.max(0,Math.min(dragState.origTop+dy,HOUR*24-dragState.dur));
     const s=Math.round(t/SNAP)*SNAP; ev.start=yToTime(s); ev.end=yToTime(s+dragState.dur);
+    if(!dragState.captured && dragging){
+      try{ dragging.setPointerCapture(dragState.pointerId); }catch{}
+      dragState.captured=true;
+    }
   } else {//resize
     const sy = timeToY(ev.start);
     let ne = dragState.origEnd + dy;
@@ -687,7 +697,10 @@ function setStatus(msg,color){ const el=document.getElementById('sync-status'); 
 function handleAuth(){
   if(accessToken){
     accessToken=null; driveFileId=null; folderId=null;
-    const btn=document.getElementById('auth-btn'); btn.textContent='Connect Drive'; btn.classList.remove('connected'); setStatus(''); return;
+    const btn=document.getElementById('settings-auth-btn'); btn.textContent='🔗 Connect Drive'; btn.classList.remove('connected'); setStatus('');
+    document.getElementById('drive-status').textContent='● Disconnected';
+    document.getElementById('drive-status').style.color='var(--red)';
+    return;
   }
   if(typeof google==='undefined'||!google.accounts){ setStatus('Loading…'); setTimeout(handleAuth,800); return; }
   google.accounts.oauth2.initTokenClient({
@@ -695,7 +708,9 @@ function handleAuth(){
     callback:async(resp)=>{
       if(resp.error){ setStatus('Auth failed','var(--red)'); return; }
       accessToken=resp.access_token;
-      const btn=document.getElementById('auth-btn'); btn.textContent='Disconnect'; btn.classList.add('connected');
+      const btn=document.getElementById('settings-auth-btn'); btn.textContent='⛓️‍💥 Disconnect Drive'; btn.classList.add('connected');
+      document.getElementById('drive-status').textContent='● Connected';
+      document.getElementById('drive-status').style.color='var(--green)';
       setStatus('Connecting…'); await initDrive();
     }
   }).requestAccessToken();
@@ -708,7 +723,9 @@ function autoReconnect(){
     callback:async(resp)=>{
       if(resp.error) return;
       accessToken=resp.access_token;
-      const btn=document.getElementById('auth-btn'); btn.textContent='Disconnect'; btn.classList.add('connected');
+      const btn=document.getElementById('settings-auth-btn'); btn.textContent='⛓️‍💥 Disconnect Drive'; btn.classList.add('connected');
+      document.getElementById('drive-status').textContent='● Connected';
+      document.getElementById('drive-status').style.color='var(--green)';
       setStatus('Connecting…'); await initDrive();
     }
   }).requestAccessToken();
@@ -804,13 +821,15 @@ if(saved){
     console.error('Local load failed', e);
   }
 }else{
-  poolTasks = ['Review tutorials','Call Emily','Talk to immigration agent','Work on personal project','Check emails']
+  poolTasks = []
     .map(name=>({id:uid(),name}));
 }
 if(localStorage.getItem('poolHidden')) document.querySelector('.pool').classList.add('pool-hidden');
 renderAll(); scrollToNow();
 setInterval(()=>{ renderGrid(); renderEvents(); },60000);
 autoReconnect();
+document.getElementById('drive-status').textContent='● Disconnected';
+document.getElementById('drive-status').style.color='var(--red)';
 
 function togglePool(){
   const p=document.querySelector('.pool');
