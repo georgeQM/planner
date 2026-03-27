@@ -119,7 +119,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-edit:hover{color:var(--accent)}
 .ev-del{width:14px;height:14px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);flex-shrink:0;line-height:1}
 .ev-del:hover{color:var(--red)}
-.ev-resize{position:absolute;bottom:0;left:0;right:0;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center}
+.ev-resize{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:32px;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;border-radius:4px}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
 .ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2;background:rgba(245,242,238,0.97);border-radius:4px;touch-action:none}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
