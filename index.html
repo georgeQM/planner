@@ -31,6 +31,12 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .settings-back:hover{border-color:var(--accent);color:var(--accent)}
 .settings-title{font-family:'Fraunces',serif;font-size:17px;font-weight:500;color:var(--text)}
 .settings-body{padding:16px;display:flex;flex-direction:column;gap:8px}
+.history-panel{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;flex-direction:column}
+.history-panel.open{display:flex}
+.history-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:6px}
+.history-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px}
+.history-item-name{font-weight:500;margin-bottom:3px}
+.history-item-meta{font-size:10px;color:var(--text3)}
 .settings-row{display:flex;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);cursor:pointer;transition:all 0.15s}
 .settings-row:hover{border-color:var(--accent);color:var(--accent)}
 #settings-auth-btn.connected{border-color:var(--green);color:var(--green)}
@@ -113,7 +119,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-edit:hover{color:var(--accent)}
 .ev-del{width:14px;height:14px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);flex-shrink:0;line-height:1}
 .ev-del:hover{color:var(--red)}
-.ev-resize{position:absolute;bottom:0;left:0;right:0;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center}
+.ev-resize{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:32px;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;border-radius:4px}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
 .ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2;background:rgba(245,242,238,0.97);border-radius:4px;touch-action:none}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
@@ -192,6 +198,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   </div>
   <div class="settings-body">
     <button class="settings-row" onclick="openWeekPlanner()">📅 Plan Your Week</button>
+    <button class="settings-row" onclick="openHistory()">📋 History</button>
   <button class="settings-row" id="settings-auth-btn" onclick="handleAuth()">🔗 Connect Drive</button>
   </div>
 </div>
@@ -205,6 +212,14 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
   <div class="wp-scroll">
     <div class="wp-grid" id="wp-grid"></div>
   </div>
+</div>
+
+<div class="history-panel" id="history-panel">
+  <div class="settings-header">
+    <button class="settings-back" onclick="closeHistory()">← Back</button>
+    <span class="settings-title">History</span>
+  </div>
+  <div class="history-body" id="history-body"></div>
 </div>
 
 <div class="modal-bg" id="modal-bg">
@@ -224,6 +239,9 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
     <div id="m-recur-wrap" style="display:none">
       <span class="field-label">Repeat on:</span>
       <div id="m-recur-days" class="recur-days-row">
+        <label id="recur-all-label" style="width:auto;padding:0 8px;border-radius:16px">
+          <input type="checkbox" id="recur-all" checked> All
+        </label>
         <label><input type="checkbox" name="recur" value="0">S</label>
         <label><input type="checkbox" name="recur" value="1">M</label>
         <label><input type="checkbox" name="recur" value="2">T</label>
@@ -256,6 +274,7 @@ let weeklyPlan = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 const today = new Date(); today.setHours(0,0,0,0);
 let selectedDate = new Date(today);
 let poolTasks = [];
+let completedTasks = [];
 let events = {};
 let accessToken = null;
 let driveFileId = null;
@@ -354,6 +373,8 @@ function renderEvents(){
   getEvents(selectedDate).forEach(ev=>{
     const el=document.createElement('div');
     el.className=`cal-event ${ev.type}${ev.done?' done-ev':''}`;
+    const evIsOld = ev.createdAt && (Date.now() - new Date(ev.createdAt).getTime()) > 7*24*60*60*1000;
+    if(evIsOld) el.style.borderColor = 'var(--red)';
     el.style.top = timeToY(ev.start) + 'px';
     el.style.height = Math.max(timeToY(ev.end)-timeToY(ev.start), SNAP) + 'px'; 
     el.dataset.id=ev.id;
@@ -362,7 +383,28 @@ function renderEvents(){
     if (evHeightPx >= 60) {
       el.querySelector('.ev-title').style.marginTop = '18px';
     }
-    el.querySelector('.ev-check').addEventListener('click',e=>{ e.stopPropagation(); const x=getEvents(selectedDate).find(x=>x.id===ev.id); if(x){x.done=!x.done; renderEvents(); scheduleSave();} });
+    el.querySelector('.ev-check').addEventListener('click', e => {
+      e.stopPropagation();
+      const x = getEvents(selectedDate).find(x => x.id === ev.id);
+      if(!x) return;
+      x.done = !x.done;
+      if(x.done){
+        const [sh,sm] = x.start.split(':').map(Number);
+        const [eh,em] = x.end.split(':').map(Number);
+        const durMin = (eh*60+em) - (sh*60+sm);
+        completedTasks.push({
+          id: x.id,
+          name: x.name,
+          completedAt: new Date().toISOString(),
+          duration: durMin,
+          date: dateStr(selectedDate)
+        });
+      } else {
+        completedTasks = completedTasks.filter(c => c.id !== x.id);
+      }
+      renderEvents();
+      scheduleSave();
+    });
     el.querySelector('.ev-del').addEventListener('click',e=>{
       e.stopPropagation();
 
@@ -372,7 +414,8 @@ function renderEvents(){
       if(ev.type === 'task-ev'){
         poolTasks.push({
           id: uid(),
-          name: ev.name
+          name: ev.name,
+          createdAt: ev.createdAt || null
         });
         renderPool();
         renderAll();
@@ -485,6 +528,8 @@ function renderPool(){
   const sec=document.createElement('div'); sec.className='pool-section'; sec.textContent='Backlog'; list.appendChild(sec);
   poolTasks.forEach(t=>{
     const el=document.createElement('div'); el.className='pool-task';
+    const isOld = t.createdAt && (Date.now() - new Date(t.createdAt).getTime()) > 7*24*60*60*1000;
+    if(isOld) el.style.borderColor = 'var(--red)';
     el.innerHTML=`<span class="pool-task-name">${t.name}</span><span class="pool-task-del" data-id="${t.id}">✕</span>`;
     el.querySelector('.pool-task-del').addEventListener('click',e=>{ e.stopPropagation(); poolTasks=poolTasks.filter(x=>x.id!==t.id); renderPool(); scheduleSave(); });
     list.appendChild(el);
@@ -577,13 +622,15 @@ function onPoolUp(e){
     let newStartY = y;
     let newEndY = y + SNAP;
 
+    const sourceTask = poolTasks.find(t => t.id === dragState.id);
     evs.push({
       id: uid(),
       name: dragState.name,
       start,
       end,
       type: 'task-ev',
-      done: false
+      done: false,
+      createdAt: sourceTask?.createdAt || null
     });
 
     poolTasks = poolTasks.filter(t => t.id !== dragState.id);
@@ -610,7 +657,7 @@ document.addEventListener("pointercancel", onPoolUp);
 
 function addPoolTask(){
   const inp=document.getElementById('pool-input'), name=inp.value.trim(); if(!name) return;
-  poolTasks.push({id:uid(),name}); inp.value=''; renderPool(); scheduleSave();
+  poolTasks.push({id:uid(),name,createdAt:new Date().toISOString()}); inp.value=''; renderPool(); scheduleSave();
 }
 
 document.getElementById('pool-input').addEventListener('keydown',e=>{ if(e.key==='Enter') addPoolTask(); });
@@ -668,6 +715,8 @@ function closeModal(){
   document.getElementById('m-recur-wrap').style.borderColor='';
   document.getElementById('modal-note').style.display='none';
   modalCb=null;
+  document.getElementById('m-type').onchange = null;
+  document.getElementById('recur-all').checked = true;
 }
 function confirmModal(){
   const name=document.getElementById('m-name').value.trim(), start=document.getElementById('m-start').value, end=document.getElementById('m-end').value, type=document.getElementById('m-type').value;
@@ -687,6 +736,9 @@ function confirmModal(){
 }
 document.getElementById('m-name').addEventListener('keydown',e=>{ if(e.key==='Enter') confirmModal(); });
 document.getElementById('modal-bg').addEventListener('click',e=>{ if(e.target===document.getElementById('modal-bg')) closeModal(); });
+document.getElementById('recur-all').addEventListener('change', e => {
+  document.querySelectorAll('#m-recur-days input[name=recur]').forEach(c => c.checked = e.target.checked);
+});
 
 function renderAll(){ renderWeekStrip(); renderGrid(); renderEvents(); renderPool(); }
 function scrollToNow(){ const now=new Date(), isToday=dateStr(now)===dateStr(selectedDate); document.getElementById('cal-scroll').scrollTop=(isToday?Math.max(now.getHours()-1,6):7)*HOUR; }
@@ -766,9 +818,10 @@ async function initDrive(){
     if(fileId){ 
       driveFileId=fileId; 
       const data=await loadFile(fileId); 
-      if(data.poolTasks) poolTasks=data.poolTasks; 
-      if(data.events) events=data.events; 
+      if(data.poolTasks) poolTasks=data.poolTasks;
+      if(data.events) events=data.events;
       if(data.weeklyPlan) weeklyPlan = data.weeklyPlan;
+      if(data.completedTasks) completedTasks = data.completedTasks;
       setStatus('Synced ✓','var(--green)'); 
       setTimeout(()=>setStatus(''),2500); 
     }
@@ -785,7 +838,7 @@ async function loadFile(fileId){
 function scheduleSave(){
   setStatus('Unsaved…'); clearTimeout(saveTimer);
   saveTimer = setTimeout(async()=>{
-    const data = { poolTasks, events, weeklyPlan, savedAt:new Date().toISOString() };
+    const data = { poolTasks, events, weeklyPlan, completedTasks, savedAt:new Date().toISOString() };
 
     // Always save locally
     localStorage.setItem('planner', JSON.stringify(data));
@@ -817,6 +870,7 @@ if(saved){
     if(data.poolTasks) poolTasks = data.poolTasks;
     if(data.events) events = data.events;
     if(data.weeklyPlan) weeklyPlan = data.weeklyPlan;
+    if(data.completedTasks) completedTasks = data.completedTasks;
   }catch(e){
     console.error('Local load failed', e);
   }
@@ -826,7 +880,20 @@ if(saved){
 }
 if(localStorage.getItem('poolHidden')) document.querySelector('.pool').classList.add('pool-hidden');
 renderAll(); scrollToNow();
+returnUncompletedToPool();
 setInterval(()=>{ renderGrid(); renderEvents(); },60000);
+const now = new Date();
+const msUntilMidnight = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1) - now;
+setTimeout(()=>{
+  today.setDate(today.getDate()+1);
+  returnUncompletedToPool();
+  renderAll();
+  setInterval(()=>{
+    today.setDate(today.getDate()+1);
+    returnUncompletedToPool();
+    renderAll();
+  }, 24*60*60*1000);
+}, msUntilMidnight);
 autoReconnect();
 document.getElementById('drive-status').textContent='● Disconnected';
 document.getElementById('drive-status').style.color='var(--red)';
@@ -845,6 +912,9 @@ function closeSettings(){
   document.getElementById('settings-panel').classList.remove('open');
 }
 window.addEventListener('popstate',()=>{
+  if(document.getElementById('history-panel').classList.contains('open')){
+    closeHistory(); return;
+  }
   if(document.getElementById('week-planner-panel').classList.contains('open')){
     closeWeekPlanner();
     history.pushState({panel:'settings'},'');
@@ -864,6 +934,50 @@ function openWeekPlanner(){
 }
 function closeWeekPlanner(){
   document.getElementById('week-planner-panel').classList.remove('open');
+}
+function openHistory(){
+  renderHistory();
+  document.getElementById('history-panel').classList.add('open');
+  history.pushState({panel:'history'},'');
+}
+function closeHistory(){
+  document.getElementById('history-panel').classList.remove('open');
+}
+function renderHistory(){
+  const body = document.getElementById('history-body');
+  body.innerHTML = '';
+  if(!completedTasks.length){
+    body.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:10px">No completed tasks yet.</div>';
+    return;
+  }
+  [...completedTasks].reverse().forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    const d = new Date(c.completedAt);
+    const timeStr = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const dateStr2 = d.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});
+    const durStr = c.duration >= 60
+      ? `${Math.floor(c.duration/60)}h ${c.duration%60>0?c.duration%60+'min':''}`.trim()
+      : `${c.duration}min`;
+    el.innerHTML = `<div class="history-item-name">${c.name}</div>
+      <div class="history-item-meta">${dateStr2} · ${timeStr} · ${durStr}</div>`;
+    body.appendChild(el);
+  });
+}
+function returnUncompletedToPool(){
+  const todayStr = dateStr(today);
+  Object.keys(events).forEach(k => {
+    if(k >= todayStr) return;
+    events[k].forEach(ev => {
+      if(ev.done || ev.type !== 'task-ev' || ev.fromTemplate || ev.returnedToPool) return;
+      if(!poolTasks.some(t => t.name === ev.name)){
+        poolTasks.push({id: uid(), name: ev.name, createdAt: ev.createdAt || null});
+      }
+      ev.returnedToPool = true;
+    });
+  });
+  renderPool();
+  scheduleSave();
 }
 function renderWeekPlan(){
   const grid=document.getElementById('wp-grid');
@@ -932,6 +1046,14 @@ function openTemplateModal(preDay,editId){
   document.getElementById('m-recur-wrap').style.outline='';
   document.getElementById('modal-confirm-btn').textContent='Save';
   document.getElementById('modal-bg').classList.add('open');
+  document.getElementById('m-type').onchange = function(){
+    if(this.value === 'task-ev'){
+      document.querySelectorAll('#m-recur-days input[name=recur]').forEach(c => c.checked = false);
+      document.getElementById('m-recur-wrap').style.display = 'none';
+    } else {
+      document.getElementById('m-recur-wrap').style.display = 'block';
+    }
+  };
 
   const checkboxes=document.querySelectorAll('#m-recur-days input[name=recur]');
 
@@ -956,7 +1078,24 @@ function openTemplateModal(preDay,editId){
       const updated={id:editId,name,start,end,type:typeName,recurringDays:days,createdAt:original.createdAt};
       for(let i=0;i<7;i++) weeklyPlan[i]=(weeklyPlan[i]||[]).filter(t=>t.id!==editId);
       days.forEach(d=>weeklyPlan[d].push({...updated}));
-      scheduleSave(); renderWeekPlan();
+
+      const now = new Date();
+      const nowTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      for(let i=0;i<7;i++){
+        const d = new Date(today);
+        d.setDate(today.getDate()+i);
+        const k = dateStr(d);
+        if(!events[k]) continue;
+        events[k].forEach(ev => {
+          if(ev.templateId !== editId) return;
+          if(i === 0 && ev.start <= nowTimeStr) return;
+          if(original.name !== name) ev.name = name;
+          if(original.start !== start || original.end !== end){ ev.start = start; ev.end = end; }
+          if(original.type !== typeName) ev.type = typeName + '-ev';
+        });
+      }
+
+      scheduleSave(); renderWeekPlan(); renderEvents();
     };
   } else {
     // add mode
