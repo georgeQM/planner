@@ -1078,7 +1078,24 @@ function openTemplateModal(preDay,editId){
       const updated={id:editId,name,start,end,type:typeName,recurringDays:days,createdAt:original.createdAt};
       for(let i=0;i<7;i++) weeklyPlan[i]=(weeklyPlan[i]||[]).filter(t=>t.id!==editId);
       days.forEach(d=>weeklyPlan[d].push({...updated}));
-      scheduleSave(); renderWeekPlan();
+
+      const now = new Date();
+      const nowTimeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      for(let i=0;i<7;i++){
+        const d = new Date(today);
+        d.setDate(today.getDate()+i);
+        const k = dateStr(d);
+        if(!events[k]) continue;
+        events[k].forEach(ev => {
+          if(ev.templateId !== editId) return;
+          if(i === 0 && ev.start <= nowTimeStr) return;
+          if(original.name !== name) ev.name = name;
+          if(original.start !== start || original.end !== end){ ev.start = start; ev.end = end; }
+          if(original.type !== typeName) ev.type = typeName + '-ev';
+        });
+      }
+
+      scheduleSave(); renderWeekPlan(); renderEvents();
     };
   } else {
     // add mode
