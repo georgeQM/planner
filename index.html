@@ -373,6 +373,8 @@ function renderEvents(){
   getEvents(selectedDate).forEach(ev=>{
     const el=document.createElement('div');
     el.className=`cal-event ${ev.type}${ev.done?' done-ev':''}`;
+    const evIsOld = ev.createdAt && (Date.now() - new Date(ev.createdAt).getTime()) > 7*24*60*60*1000;
+    if(evIsOld) el.style.borderColor = 'var(--red)';
     el.style.top = timeToY(ev.start) + 'px';
     el.style.height = Math.max(timeToY(ev.end)-timeToY(ev.start), SNAP) + 'px'; 
     el.dataset.id=ev.id;
@@ -412,7 +414,8 @@ function renderEvents(){
       if(ev.type === 'task-ev'){
         poolTasks.push({
           id: uid(),
-          name: ev.name
+          name: ev.name,
+          createdAt: ev.createdAt || null
         });
         renderPool();
         renderAll();
@@ -525,6 +528,8 @@ function renderPool(){
   const sec=document.createElement('div'); sec.className='pool-section'; sec.textContent='Backlog'; list.appendChild(sec);
   poolTasks.forEach(t=>{
     const el=document.createElement('div'); el.className='pool-task';
+    const isOld = t.createdAt && (Date.now() - new Date(t.createdAt).getTime()) > 7*24*60*60*1000;
+    if(isOld) el.style.borderColor = 'var(--red)';
     el.innerHTML=`<span class="pool-task-name">${t.name}</span><span class="pool-task-del" data-id="${t.id}">✕</span>`;
     el.querySelector('.pool-task-del').addEventListener('click',e=>{ e.stopPropagation(); poolTasks=poolTasks.filter(x=>x.id!==t.id); renderPool(); scheduleSave(); });
     list.appendChild(el);
@@ -617,13 +622,15 @@ function onPoolUp(e){
     let newStartY = y;
     let newEndY = y + SNAP;
 
+    const sourceTask = poolTasks.find(t => t.id === dragState.id);
     evs.push({
       id: uid(),
       name: dragState.name,
       start,
       end,
       type: 'task-ev',
-      done: false
+      done: false,
+      createdAt: sourceTask?.createdAt || null
     });
 
     poolTasks = poolTasks.filter(t => t.id !== dragState.id);
@@ -650,7 +657,7 @@ document.addEventListener("pointercancel", onPoolUp);
 
 function addPoolTask(){
   const inp=document.getElementById('pool-input'), name=inp.value.trim(); if(!name) return;
-  poolTasks.push({id:uid(),name}); inp.value=''; renderPool(); scheduleSave();
+  poolTasks.push({id:uid(),name,createdAt:new Date().toISOString()}); inp.value=''; renderPool(); scheduleSave();
 }
 
 document.getElementById('pool-input').addEventListener('keydown',e=>{ if(e.key==='Enter') addPoolTask(); });
@@ -964,7 +971,7 @@ function returnUncompletedToPool(){
     events[k].forEach(ev => {
       if(ev.done || ev.type !== 'task-ev' || ev.fromTemplate || ev.returnedToPool) return;
       if(!poolTasks.some(t => t.name === ev.name)){
-        poolTasks.push({id: uid(), name: ev.name});
+        poolTasks.push({id: uid(), name: ev.name, createdAt: ev.createdAt || null});
       }
       ev.returnedToPool = true;
     });
