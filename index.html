@@ -848,13 +848,24 @@ async function initDrive(){
     const fid=await getOrCreateFolder(), fileId=await findFile(fid);
     if(fileId){ 
       driveFileId=fileId; 
-      const data=await loadFile(fileId); 
-      if(data.poolTasks) poolTasks=data.poolTasks;
-      if(data.events) events=data.events;
-      if(data.weeklyPlan) weeklyPlan = data.weeklyPlan;
-      if(data.completedTasks) completedTasks = data.completedTasks;
-      setStatus('Synced ✓','var(--green)'); 
-      setTimeout(()=>setStatus(''),2500); 
+      const data=await loadFile(fileId);
+      // Only overwrite local data if Drive version is newer
+      const localSaved = localStorage.getItem('planner');
+      const localData = localSaved ? JSON.parse(localSaved) : null;
+      const localTime = localData?.savedAt ? new Date(localData.savedAt).getTime() : 0;
+      const driveTime = data.savedAt ? new Date(data.savedAt).getTime() : 0;
+      if(driveTime >= localTime){
+        if(data.poolTasks) poolTasks=data.poolTasks;
+        if(data.events) events=data.events;
+        if(data.weeklyPlan) weeklyPlan=data.weeklyPlan;
+        if(data.completedTasks) completedTasks=data.completedTasks;
+      } else {
+        // Local is newer — push local data to Drive immediately
+        setStatus('Local data newer — uploading…');
+        await saveFile({ poolTasks, events, weeklyPlan, completedTasks, savedAt: localData.savedAt });
+      }
+      setStatus('Synced ✓','var(--green)');
+      setTimeout(()=>setStatus(''),2500);
     }
     else { setStatus('Ready','var(--green)'); setTimeout(()=>setStatus(''),2000); }
     renderAll(); scrollToNow();
