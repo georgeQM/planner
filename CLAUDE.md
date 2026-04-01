@@ -133,8 +133,8 @@ HTML child order inside each `.cal-event`:
 - Feature: task-ev type in template modal hides recur days, sets recurringDays:[]
 - Feature: test environment banner (orange, bottom) on non-production hosts
 - Feature: auto-reconnect Drive on load (prompt:'', silent fail)
-
-### Stable invariants (keep in sync with code)
+- Feature: same-start event overlap — side-by-side column layout (slotOf/totalSlots), drag z-index boost to 50, reset on drop
+- Fix: Drive sync on load — compare `savedAt` timestamps; keep newer of local vs Drive, push local to Drive if local is newer (keep in sync with code)
 - `weeklyPlan` is the single source of truth for routine templates (replaces old `routineTemplates`)
 - All calendar event types stored with `-ev` suffix (`'routine-ev'`, `'task-ev'`, `'unforeseen-ev'`); weeklyPlan templates store without suffix
 - `getEvents(d)`: guard is `events[k] === undefined` (explicit, not truthiness-based); never calls renderAll()
@@ -171,3 +171,4 @@ HTML child order inside each `.cal-event`:
 - Single file only — no splitting until v2
 - `renderWeekStrip()` clears day buttons via `querySelectorAll('.day-btn').forEach(e=>e.remove())` — do NOT use `innerHTML=''` (would delete the static `#pool-btn`)
 - Drag starts only from `.ev-handle`; `onMoveDown` must use `e.currentTarget.closest('.cal-event')` to get the event element
+- Never include Co-Authored-By or any Claude attribution in commit messages
