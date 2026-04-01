@@ -374,18 +374,45 @@ function renderEvents(){
   const col=document.getElementById('events-col'); col.querySelectorAll('.cal-event').forEach(e=>e.remove());
   const dayEvs = getEvents(selectedDate);
   overlapLevels = {};
-  const startGroups = {};
-  dayEvs.forEach(ev => {
-    if(!startGroups[ev.start]) startGroups[ev.start] = [];
-    startGroups[ev.start].push(ev.id);
-  });
-  const totalSlots = {};
   slotOf = {};
-  Object.values(startGroups).forEach(group => {
-    group.forEach((id, i) => {
-      slotOf[id] = i;
-      totalSlots[id] = group.length;
+  const totalSlots = {};
+
+  // Sort by start time
+  const sorted = dayEvs.slice().sort((a,b) => a.start.localeCompare(b.start));
+
+  // For each event, find which column slot it fits in
+  // A slot is free if no active event in that slot overlaps this one
+  const slots = []; // slots[i] = end time of last event in column i
+
+  sorted.forEach(ev => {
+    // Find overlapping events (already placed)
+    const usedSlots = new Set();
+    sorted.forEach(other => {
+      if(other.id === ev.id) return;
+      if(slotOf[other.id] === undefined) return;
+      // Check overlap: other starts before ev ends AND other ends after ev starts
+      if(other.start < ev.end && other.end > ev.start){
+        usedSlots.add(slotOf[other.id]);
+      }
     });
+    // Assign lowest available slot
+    let slot = 0;
+    while(usedSlots.has(slot)) slot++;
+    slotOf[ev.id] = slot;
+    if(slots[slot] === undefined || ev.end > slots[slot]) slots[slot] = ev.end;
+  });
+
+  // Count total slots needed per overlap group
+  // For each event, total = max slot index among all events that overlap it + 1
+  dayEvs.forEach(ev => {
+    let maxSlot = slotOf[ev.id];
+    dayEvs.forEach(other => {
+      if(other.id === ev.id) return;
+      if(other.start < ev.end && other.end > ev.start){
+        if(slotOf[other.id] > maxSlot) maxSlot = slotOf[other.id];
+      }
+    });
+    totalSlots[ev.id] = maxSlot + 1;
   });
   dayEvs.forEach(ev=>{
     const el=document.createElement('div');
