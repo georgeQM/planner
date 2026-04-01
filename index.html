@@ -414,7 +414,7 @@ function renderEvents(){
       const x = getEvents(selectedDate).find(x => x.id === ev.id);
       if(!x) return;
       x.done = !x.done;
-      if(x.done){
+      if(x.done && x.type === 'task-ev'){
         const [sh,sm] = x.start.split(':').map(Number);
         const [eh,em] = x.end.split(':').map(Number);
         const durMin = (eh*60+em) - (sh*60+sm);
