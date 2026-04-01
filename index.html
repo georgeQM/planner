@@ -121,7 +121,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .ev-del:hover{color:var(--red)}
 .ev-resize{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:32px;height:10px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;border-radius:4px}
 .ev-resize::after{content:'';width:20px;height:2px;border-radius:2px;background:var(--text3);opacity:0.25}
-.ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:2;background:rgba(245,242,238,0.97);border-radius:4px;touch-action:none}
+.ev-handle{position:absolute;top:3px;left:50%;transform:translateX(-50%);font-size:14px;color:var(--text);pointer-events:auto;opacity:0.6;cursor:grab;padding:2px 6px;z-index:20;background:rgba(245,242,238,0.97);border-radius:4px;touch-action:none}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.22);z-index:500;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
 .modal{background:var(--surface);border-radius:14px;padding:22px;width:300px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
@@ -287,6 +287,8 @@ let modalCb = null;
 let offsetX = 0;
 let offsetY = 0;
 let dragging = null;
+let overlapLevels = {};
+let slotOf = {};
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 function dateStr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -370,13 +372,37 @@ function renderGrid(){
 // EVENTS
 function renderEvents(){
   const col=document.getElementById('events-col'); col.querySelectorAll('.cal-event').forEach(e=>e.remove());
-  getEvents(selectedDate).forEach(ev=>{
+  const dayEvs = getEvents(selectedDate);
+  overlapLevels = {};
+  const startGroups = {};
+  dayEvs.forEach(ev => {
+    if(!startGroups[ev.start]) startGroups[ev.start] = [];
+    startGroups[ev.start].push(ev.id);
+  });
+  const totalSlots = {};
+  slotOf = {};
+  Object.values(startGroups).forEach(group => {
+    group.forEach((id, i) => {
+      slotOf[id] = i;
+      totalSlots[id] = group.length;
+    });
+  });
+  dayEvs.forEach(ev=>{
     const el=document.createElement('div');
     el.className=`cal-event ${ev.type}${ev.done?' done-ev':''}`;
     const evIsOld = ev.createdAt && (Date.now() - new Date(ev.createdAt).getTime()) > 7*24*60*60*1000;
     if(evIsOld) el.style.borderColor = 'var(--red)';
     el.style.top = timeToY(ev.start) + 'px';
-    el.style.height = Math.max(timeToY(ev.end)-timeToY(ev.start), SNAP) + 'px'; 
+    el.style.height = Math.max(timeToY(ev.end)-timeToY(ev.start), SNAP) + 'px';
+    const slot = slotOf[ev.id] ?? 0;
+    const total = totalSlots[ev.id] ?? 1;
+    if(total > 1){
+      const colW = 100 / total;
+      el.style.left = `calc(4px + ${slot * colW}%)`;
+      el.style.right = `calc(${(total - slot - 1) * colW}%)`;
+      el.style.width = 'auto';
+    }
+    el.style.zIndex = 5 + slot;
     el.dataset.id=ev.id;
     el.innerHTML=`<div class="ev-check${ev.done?' checked':''}" data-id="${ev.id}">${ev.done?'✓':''}</div><div class="ev-edit" data-id="${ev.id}">✏</div><div class="ev-handle">⠿</div><div class="ev-title">${ev.name}</div><div class="ev-time">${fmtTime(ev.start)} – ${fmtTime(ev.end)}</div><div class="ev-actions"><div class="ev-del" data-id="${ev.id}">✕</div></div><div class="ev-resize" data-id="${ev.id}"></div>`;
     const evHeightPx = Math.round((timeToY(ev.end) - timeToY(ev.start)) / 2);
@@ -431,6 +457,7 @@ function renderEvents(){
     el.querySelector('.ev-resize').addEventListener('pointerdown', onResizeDown);
     el.querySelector('.ev-handle').addEventListener('pointerdown', e => {
       tapDownX = e.clientX; tapDownY = e.clientY; tapDidMove = false;
+      el.style.zIndex = 50;
       onMoveDown(e);
     });
     el.querySelector('.ev-edit').addEventListener('click', e => {
@@ -514,6 +541,10 @@ function onDragUp(e){
 
   if(dragState){
     dragState = null;
+    if(dragging){
+      const slot2 = slotOf[dragging.dataset.id] ?? 0;
+      dragging.style.zIndex = 5 + slot2;
+    }
     scheduleSave();
   }
 
