@@ -472,7 +472,6 @@ function renderEvents(){
         });
         renderPool();
         renderAll();
-        scrollToNow();
       }
 
       // remove from calendar
@@ -895,7 +894,7 @@ async function initDrive(){
       setTimeout(()=>setStatus(''),2500);
     }
     else { setStatus('Ready','var(--green)'); setTimeout(()=>setStatus(''),2000); }
-    renderAll(); scrollToNow();
+    renderAll();
   } catch(err){ setStatus('Drive error','var(--red)'); console.error(err); }
 }
 
