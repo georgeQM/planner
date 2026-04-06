@@ -83,7 +83,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .quick-add input{flex:1;font-family:'DM Mono',monospace;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);outline:none;min-width:0}
 .quick-add input:focus{border-color:var(--accent)}
 .quick-add button{width:26px;height:26px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding-bottom:1px}
-.pool-list{flex:1;overflow-y:scroll;padding:6px;direction:rtl;touch-action:pan-y}
+.pool-list{flex:1;overflow-y:scroll;padding:6px;padding-bottom:80px;direction:rtl;touch-action:pan-y}
 .pool-section{font-size:10px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;padding:6px 4px 3px}
 .pool-task{padding:7px 9px;margin-bottom:4px;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:grab;background:var(--surface);user-select:none;transition:all 0.1s;display:flex;align-items:flex-start;justify-content:space-between;gap:4px;direction:ltr}
 .pool-task:hover{border-color:var(--accent);background:var(--accent-light)}
@@ -93,7 +93,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .pool-task-del:hover{color:var(--red)}
 .cal-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column}
 .cal-scroll{flex:1;overflow-y:auto;position:relative}
-.cal-grid{display:flex;position:relative;min-height:calc(var(--hour) * 24)}
+.cal-grid{display:flex;position:relative;min-height:calc(var(--hour) * 24);padding-bottom:80px}
 .time-col{width:50px;flex-shrink:0;position:relative}
 .time-label{position:absolute;right:7px;font-size:10px;color:var(--text3);transform:translateY(-50%);white-space:nowrap}
 .events-col{flex:1;position:relative;border-left:1px solid var(--border)}
