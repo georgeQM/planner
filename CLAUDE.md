@@ -144,6 +144,7 @@ HTML child order inside each `.cal-event`:
 - **History**: `completedTasks` array persisted in localStorage + Drive; populated when ev-check toggled done, pruned on undone; rendered in `#history-panel` newest-first
 - **Midnight rollover**: `returnUncompletedToPool()` runs on load and at midnight via `setTimeout`; uses `ev.returnedToPool = true` guard; deduplicates by name
 - Test banner: checks `window.location.hostname !== 'georgeqm.github.io'`; shows orange fixed banner at bottom on non-production hosts
+- Fix: pool drag uses 400ms long-press — `onPoolDown` sets timer → `startPoolDrag`; early move/up cancels timer and resets opacity; visual feedback: task dims to 0.6 opacity on press
 
 ### Deferred to v1.1 or v2
 - Past days horizontally scrollable in week strip
