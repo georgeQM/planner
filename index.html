@@ -74,17 +74,18 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 .day-btn.today .dom{color:var(--accent)}
 .day-btn.active.today .dom{color:var(--bg)}
 .main{display:flex;flex:1;overflow:hidden}
-.pool{width:var(--pool);flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);overflow:hidden}
+.pool{width:var(--pool);flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--surface);overflow:hidden;position:relative;padding-left:8px}
 .pool.pool-hidden{display:none}
-.pool-header{padding:12px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.pool-scroll-strip{position:absolute;left:0;top:0;bottom:0;width:12px;z-index:10;touch-action:pan-y;cursor:ns-resize}
+.pool-header{padding:12px 12px 8px;border-bottom:1px solid var(--border);flex-shrink:0;padding-left:16px}
 .pool-label{font-size:10px;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:8px}
 .quick-add{display:flex;gap:5px}
 .quick-add input{flex:1;font-family:'DM Mono',monospace;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);outline:none;min-width:0}
 .quick-add input:focus{border-color:var(--accent)}
 .quick-add button{width:26px;height:26px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding-bottom:1px}
-.pool-list{flex:1;overflow-y:auto;padding:6px}
+.pool-list{flex:1;overflow-y:scroll;padding:6px;direction:rtl;touch-action:pan-y}
 .pool-section{font-size:10px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;padding:6px 4px 3px}
-.pool-task{padding:7px 9px;margin-bottom:4px;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:grab;background:var(--surface);user-select:none;transition:all 0.1s;display:flex;align-items:flex-start;justify-content:space-between;gap:4px}
+.pool-task{padding:7px 9px;margin-bottom:4px;border:1px solid var(--border);border-radius:7px;font-size:12px;cursor:grab;background:var(--surface);user-select:none;transition:all 0.1s;display:flex;align-items:flex-start;justify-content:space-between;gap:4px;direction:ltr}
 .pool-task:hover{border-color:var(--accent);background:var(--accent-light)}
 .pool-task:active{cursor:grabbing;opacity:0.65}
 .pool-task-name{flex:1;line-height:1.4}
@@ -136,12 +137,15 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.pool-list::-webkit-scrollbar{width:4px}
+.pool-list::-webkit-scrollbar-track{background:transparent}
+.pool-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .draggable {touch-action: none; user-select: none;}
 .ev-resize {
   touch-action: none;
 }
 .pool-task {
-  touch-action: none;
+  touch-action: pan-y;
 }
 .field-label{font-size:10px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;display:block}
 #m-recur-wrap{margin-bottom:8px}
@@ -171,6 +175,7 @@ body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);heig
 
 <div class="main">
   <div class="pool">
+    <div class="pool-scroll-strip"></div>
     <div class="pool-header">
       <div class="pool-label">Task Pool</div>
       <div class="quick-add">
@@ -287,6 +292,9 @@ let modalCb = null;
 let offsetX = 0;
 let offsetY = 0;
 let dragging = null;
+let poolPressTimer = null;
+let poolPressEl = null;
+let poolPressE = null;
 let overlapLevels = {};
 let slotOf = {};
 
@@ -595,9 +603,18 @@ function renderPool(){
 }
 
 function onPoolDown(e){
-  e.preventDefault();
+  poolPressEl = e.currentTarget;
+  poolPressE = e;
+  poolPressEl.style.opacity = '0.6';
+  poolPressTimer = setTimeout(()=>{
+    poolPressTimer = null;
+    startPoolDrag(poolPressEl, poolPressE);
+  }, 400);
+}
 
-  const el = e.currentTarget;
+function startPoolDrag(el, e){
+  e.preventDefault();
+  if(poolPressEl) poolPressEl.style.opacity = '';
   const taskName = el.querySelector('.pool-task-name').textContent;
   const taskId = el.querySelector('.pool-task-del').dataset.id;
 
@@ -605,25 +622,11 @@ function onPoolDown(e){
   document.body.appendChild(dragging);
 
   const rect = el.getBoundingClientRect();
-  dragging.style.width = rect.width + "px";
-  dragging.style.height = rect.height + "px";
+  dragging.style.cssText = `width:${rect.width}px;height:${rect.height}px;position:fixed;left:${rect.left}px;top:${rect.top}px;pointer-events:all;z-index:1000;opacity:0.9;font-family:'DM Mono',monospace;font-size:12px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--surface);touch-action:none`;
 
-  dragging.style.position = "fixed";
-  dragging.style.left = rect.left + "px";
-  dragging.style.top = rect.top + "px";
+  dragState = { type:'pool', id:taskId, name:taskName };
 
-  dragging.style.pointerEvents = "all";
-  dragging.style.zIndex = "1000";
-  dragging.style.opacity = "0.9";
-
-  // ✅ capture HERE instead
-  dragging.setPointerCapture(e.pointerId);
-
-  dragState = {
-    type: 'pool',
-    id: taskId,
-    name: taskName
-  };
+  try{ dragging.setPointerCapture(e.pointerId); }catch{}
 
   window.addEventListener("pointermove", onPoolMove);
   window.addEventListener("pointerup", onPoolUp);
@@ -631,6 +634,12 @@ function onPoolDown(e){
 
 let raf;
 function onPoolMove(e){
+  if(poolPressTimer){
+    clearTimeout(poolPressTimer);
+    poolPressTimer = null;
+    if(poolPressEl) poolPressEl.style.opacity = '';
+    return;
+  }
   if(!dragState || dragState.type !== 'pool') return;
   const cal = document.getElementById('events-col');
   const rect = cal.getBoundingClientRect();
@@ -651,6 +660,12 @@ function onPoolMove(e){
 }
 
 function onPoolUp(e){
+  if(poolPressTimer){
+    clearTimeout(poolPressTimer);
+    poolPressTimer = null;
+    if(poolPressEl) poolPressEl.style.opacity = '';
+    return;
+  }
   if(!dragState || dragState.type !== 'pool') return;
   dragging.style.pointerEvents = "none";
   dragging.style.pointerEvents = "all";
@@ -702,6 +717,7 @@ function onPoolUp(e){
     dragging.releasePointerCapture(e.pointerId);
   } catch {}
 
+  document.querySelectorAll('.pool-task').forEach(t => t.style.touchAction = 'pan-y');
   dragging.remove();
   dragging = null;
   dragState = null;
